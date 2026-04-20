@@ -1,262 +1,124 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - INPTIC</title>
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-   <style>
-        :root {
-            --primary-color: #0d6efd;
-            --secondary-color: #6c757d;
-            --accent-color: #198754;
-            --light-bg: #f8f9fa;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            --card-hover-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        }
+    <title>Connexion | INPTIC</title>
+    
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            /* Image de fond */
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .bg-login {
             background-image: url('/images/inptic.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            background-attachment: fixed;
-            position: relative;
-        }
-
-        /* Overlay sombre pour améliorer la lisibilité du formulaire */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 0;
-        }
-
-        /* Contenu principal au-dessus de l'overlay */
-        .login-container, .header-logos {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Conteneur des logos en haut */
-        .header-logos {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 2rem;
-            background: transparent;
-        }
-
-        .logo-inptic img, .flag-gabon img {
-            height: 90px;  /* Augmenté de 60px à 90px */
-            width: auto;
-            transition: transform 0.3s ease;
-        }
-
-        .logo-inptic img:hover, .flag-gabon img:hover {
-            transform: scale(1.05);
-        }
-
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(2px);
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #0a58ca 100%);
-            border-bottom: none;
-            padding: 1.5rem;
-        }
-
-        .card-body {
-            padding: 2rem;
-        }
-
-        .form-control {
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            border: 1px solid #e1e5e9;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-            border-color: var(--primary-color);
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 0.5rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #0a58ca 100%);
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
-        }
-
-        .form-check-input:checked {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        .login-container {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem 0 2rem 0;
-        }
-
-        .login-card {
-            width: 100%;
-            max-width: 450px;
-        }
-
-        .login-title {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: white;
-            margin: 0;
-        }
-
-        .forgot-password {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .forgot-password:hover {
-            color: #0a58ca;
-        }
-
-        .invalid-feedback {
-            display: block;
-            font-weight: 500;
-        }
-
-        .form-check-label {
-            color: #2c3e50;
-        }
-
-        /* Responsive */
-        @media (max-width: 576px) {
-            .header-logos {
-                padding: 0.75rem 1rem;
-            }
-            .logo-inptic img, .flag-gabon img {
-                height: 65px;  /* Augmenté de 45px à 65px pour mobile */
-            }
-            .card-body {
-                padding: 1.5rem;
-            }
         }
     </style>
 </head>
-<body>
-    <!-- Logos en haut à gauche et à droite (plus de navbar blanche) -->
-    <div class="header-logos">
-        <div class="logo-inptic">
-            <img src="/logo/logoinptic.png" alt="Logo INPTIC">
-        </div>
-        <div class="flag-gabon">
-            <img src="/logo/Drapeau_du_Gabon.png" alt="Drapeau du Gabon">
-        </div>
-    </div>
+<body class="h-full overflow-hidden antialiased font-sans bg-login">
+    
+    <div class="fixed inset-0 bg-gradient-to-br from-blue-900/50 to-black/80 z-0"></div>
 
-    <div class="login-container">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-md-5">
-                    <div class="card login-card">
-                        <div class="card-header text-center">
-                            <h4 class="login-title">
-                                <i class="bi bi-person-circle me-2"></i>Connexion
-                            </h4>
+    <div class="relative z-10 h-full flex flex-col">
+        
+        <header class="flex justify-between items-center px-6 py-4 md:px-10">
+            <div class="transform hover:scale-105 transition-all">
+                <img src="/logo/logoinptic.png" alt="Logo INPTIC" class="h-12 md:h-16 w-auto drop-shadow-lg">
+            </div>
+            <div class="transform hover:scale-105 transition-all">
+                <img src="/logo/Drapeau_du_Gabon.png" alt="Drapeau du Gabon" class="h-10 md:h-14 w-auto shadow-md rounded">
+            </div>
+        </header>
+
+        <main class="flex-grow flex items-center justify-center p-4">
+            <div 
+                x-data="{ show: false }" 
+                x-init="setTimeout(() => show = true, 50)"
+                x-show="show"
+                x-transition:enter="transition ease-out duration-500"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                class="w-full max-w-md"
+            >
+                <div class="glass-card rounded-3xl shadow-2xl overflow-hidden border border-white/20">
+                    
+                    <div class="bg-indigo-600/90 p-5 text-center">
+                        <div class="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-full mb-2">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
                         </div>
-                        <div class="card-body">
-                            <!-- Formulaire login -->
-                            <form method="POST" action="{{ route('login') }}">
-                                @csrf
-                                <!-- Email -->
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Adresse e-mail</label>
-                                    <input type="email"
-                                           name="email"
-                                           id="email"
-                                           class="form-control @error('email') is-invalid @enderror"
-                                           value="{{ old('email') }}"
-                                           required
-                                           autofocus>
-                                    @error('email')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                        <h2 class="text-xl font-bold text-white tracking-tight">Espace Authentification</h2>
+                    </div>
+
+                    <div class="p-6 md:p-8">
+                        <form method="POST" action="{{ route('login') }}" class="space-y-4">
+                            @csrf
+
+                            <div>
+                                <label for="email" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1 ml-1">Identifiant Email</label>
+                                <div class="relative group">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-indigo-500 transition-colors">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                                    </span>
+                                    <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus
+                                        class="block w-full pl-10 pr-3 py-2.5 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all border bg-white/60"
+                                        placeholder="votre.nom@inptic.ga">
                                 </div>
+                                <x-input-error :messages="$errors->get('email')" class="mt-1 text-xs" />
+                            </div>
 
-                                <!-- Password -->
-                                <div class="mb-3">
-                                    <label for="password" class="form-label">Mot de passe</label>
-                                    <input type="password"
-                                           name="password"
-                                           id="password"
-                                           class="form-control @error('password') is-invalid @enderror"
-                                           required>
-                                    @error('password')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                               <!-- Remember Me -->
-                              <!-- <div class="form-check mb-3">
-                                  <input type="checkbox" name="remember" id="remember" class="form-check-input">
-                                  <label class="form-check-label" for="remember">Se souvenir de moi</label>
-                             </div> -->
-
-                                <!-- Bouton Connexion -->
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+                            <div x-data="{ showPass: false }">
+                                <label for="password" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1 ml-1">Mot de passe</label>
+                                <div class="relative group">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-indigo-500 transition-colors">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                                    </span>
+                                    <input :type="showPass ? 'text' : 'password'" id="password" name="password" required
+                                        class="block w-full pl-10 pr-10 py-2.5 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all border bg-white/60"
+                                        placeholder="••••••••">
+                                    <button type="button" @click="showPass = !showPass" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-indigo-600 transition-colors">
+                                        <svg x-show="!showPass" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        <svg x-show="showPass" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.888 9.888L3 3m18 18l-6.888-6.888" /></svg>
                                     </button>
                                 </div>
-                            </form>
-
-                            <!-- Mot de passe oublié -->
-                            <div class="mt-3 text-center">
-                                <a href="{{ route('password.request') }}" class="forgot-password">Mot de passe oublié ?</a>
+                                <x-input-error :messages="$errors->get('password')" class="mt-1 text-xs" />
                             </div>
-                        </div>
+
+                            <div class="flex items-center justify-between py-1">
+                                <label class="inline-flex items-center group cursor-pointer">
+                                    <input type="checkbox" name="remember" class="rounded-md border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 transition-all cursor-pointer">
+                                    <span class="ml-2 text-xs text-gray-600 group-hover:text-indigo-600 transition-colors">Rester connecté</span>
+                                </label>
+                                @if (Route::has('password.request'))
+                                    <a class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold" href="{{ route('password.request') }}">
+                                        Oublié ?
+                                    </a>
+                                @endif
+                            </div>
+
+                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transform active:scale-95 transition-all duration-150">
+                                SE CONNECTER
+                            </button>
+                        </form>
                     </div>
                 </div>
+                
+                <p class="mt-4 text-center text-white/60 text-[10px] uppercase tracking-widest font-medium">
+                    &copy; {{ date('Y') }} INPTIC - GI-3B System
+                </p>
             </div>
-        </div>
+        </main>
     </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
