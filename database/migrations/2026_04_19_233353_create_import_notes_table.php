@@ -13,7 +13,6 @@ return new class extends Migration
             $table->string('fichier', 255)->nullable();
             $table->enum('statut', ['pending', 'success', 'failed']);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('created_at')->useCurrent();
             $table->timestamps();
         });
     }
