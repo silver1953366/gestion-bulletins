@@ -8,6 +8,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Mail;
+use App\Models\User;
+
 
 class AuthenticatedSessionController extends Controller
 {
@@ -21,15 +24,45 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Handle an incoming authentication request.
-     */
-    public function store(LoginRequest $request): RedirectResponse
-    {
-        $request->authenticate();
+     */public function store(Request $request): RedirectResponse
+{
+    // Validation
+    $request->validate([
+        'email' => 'required|string|email',
+        'password' => 'required|string',
+    ]);
 
-        $request->session()->regenerate();
-
-        return redirect()->intended(route('dashboard', absolute: false));
+    // Tentative de connexion
+    if (! Auth::attempt($request->only('email','password'), $request->boolean('remember'))) {
+        return back()->withErrors(['email' => 'Identifiants invalides.']);
     }
+
+    // Récupérer l'utilisateur connecté
+    $user = Auth::user();
+
+    // Génération du code à 6 chiffres
+    $code = rand(100000, 999999);
+
+    // Stocker uniquement l'ID et le code en session
+    session([
+        'verification_code' => $code,
+        'verification_user_id' => $user->id,
+    ]);
+
+    // Envoi du code par mail
+    Mail::raw("Votre code de vérification est : $code", function ($message) use ($user) {
+        $message->to($user->email)
+                ->subject('Code de vérification - gestion de bulletins');
+    });
+
+    // Déconnecter temporairement (2FA pas encore validé)
+    Auth::logout();
+
+    // Rediriger vers le formulaire de vérification
+    return redirect()->route('verify.form');
+}
+
+
 
     /**
      * Destroy an authenticated session.
