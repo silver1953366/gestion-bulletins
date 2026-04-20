@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 
@@ -25,7 +26,9 @@ class LoginController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if ($user && Hash::check($request->password, $user->password)) {
-
+               
+            // Auth::login($user, $request->has('remember')); // Optionnel : se souvenir de l'utilisateur   
+            
             // =========================
             // CODE 2FA - COMMENTÉ
             // =========================
@@ -74,11 +77,10 @@ class LoginController extends Controller
 
             // Redirection selon rôle
             $redirectUrl = match($user->role->name) {
-                'superadmin' => route('superadmin.dashboard'),
                 'admin' => route('admin.dashboard'),
-                'chef_service' => route('chef.dashboard'),
-                'infirmier' => route('infirmier.dashboard'),
-                'patient' => route('patient.dashboard'),
+                'enseignant' => route('enseignant.dashboard'),
+                'secretaire' => route('secretaire.dashboard'),
+                'etudiant' => route('etudiant.dashboard'),
                 default => '/'
             };
 

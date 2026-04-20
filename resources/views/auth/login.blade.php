@@ -232,10 +232,10 @@
                                 </div>
 
                                <!-- Remember Me -->
-                              <div class="form-check mb-3">
+                              <!-- <div class="form-check mb-3">
                                   <input type="checkbox" name="remember" id="remember" class="form-check-input">
                                   <label class="form-check-label" for="remember">Se souvenir de moi</label>
-                             </div>
+                             </div> -->
 
                                 <!-- Bouton Connexion -->
                                 <div class="d-grid">
