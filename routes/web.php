@@ -91,9 +91,46 @@ Route::middleware('auth')->prefix('profile')->group(function () {
 
 // Routes ADMIN
 // ---------------------------
- Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
-    // Dashboard principal
-     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+ Route::prefix('admin')->name('admin.')->group(function () {
+
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
+
+    // Étudiants sans notes
+    Route::get('/etudiants/sans-notes', function () {
+        return "Liste des étudiants sans notes";
+    })->name('etudiants.sans-notes');
+
+    // Matières sans enseignant
+    Route::get('/matieres/sans-enseignant', function () {
+        return "Matières sans enseant";
+    })->name('matieres.sans-enseignant');
+
+    // Absences excessives
+    Route::get('/absences/excessives', function () {
+        return "Étudiants avec absences excessives";
+    })->name('absences.excessives');
+
+    // Incohérences
+    Route::get('/incoherences', function () {
+        return "Incohérences détectées";
+    })->name('incohérences');
+
+    // Années académiques
+    Route::get('/annees-academiques', function () {
+        return "Gestion des années académiques";
+    })->name('annees-academiques');
+
+
+
+    Route::resource('admin/etudiants', EtudiantController::class);
+Route::resource('admin/matieres', MatiereController::class);
+Route::resource('admin/ues', UeController::class);
+Route::resource('admin/absences', AbsenceController::class);
+Route::resource('admin/bulletins', BulletinController::class);
+Route::resource('admin/users', UserController::class);
+});
 
 //     Route::resource('etudiants', EtudiantController::class);
 //     Route::resource('ues', UEController::class);
@@ -120,7 +157,7 @@ Route::middleware('auth')->prefix('profile')->group(function () {
 //     Route::post('/notes/recalcul-global', [NoteController::class, 'recalculGlobal'])->name('notes.recalculGlobal');
 //     Route::post('/notes/set-rattrapage-type', [NoteController::class, 'setRattrapageType'])->name('notes.setRattrapageType');
 
- });
+ //});
 
 // ---------------------------
 // Routes Deconnexion

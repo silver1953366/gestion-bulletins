@@ -259,10 +259,10 @@ class DashboardController extends Controller
         }
         
         // 3. Absences excessives
-        $excessiveAbsences = Absence::having('heures', '>', 20)
-            ->groupBy('etudiant_id')
-            ->select('etudiant_id', DB::raw('SUM(heures) as total_heures'))
-            ->get();
+       $excessiveAbsences = Absence::selectRaw('etudiant_id, SUM(heures) as total_heures')
+    ->groupBy('etudiant_id')
+    ->having('total_heures', '>', 20)
+    ->get();
         
         if ($excessiveAbsences->count() > 0) {
             $alerts[] = [
