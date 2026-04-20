@@ -41,8 +41,8 @@ require __DIR__.'/auth.php';
 // ---------------------------
 // Vérification par code (2FA)
 // ---------------------------
-Route::get('/verify', [VerificationController::class, 'showVerifyForm'])->name('verify.form');
-Route::post('/verify', [VerificationController::class, 'verify'])->name('verify.check');
+// Route::get('/verify', [VerificationController::class, 'showVerifyForm'])->name('verify.form');
+// Route::post('/verify', [VerificationController::class, 'verify'])->name('verify.check');
 
 // ---------------------------
 // Redirection Dashboard central
@@ -91,36 +91,36 @@ Route::middleware('auth')->prefix('profile')->group(function () {
 
 // Routes ADMIN
 // ---------------------------
-Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
+ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     // Dashboard principal
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
-    Route::resource('etudiants', EtudiantController::class);
-    Route::resource('ues', UEController::class);
-    Route::resource('matieres', MatiereController::class);
-    Route::resource('users', UtilisateurController::class);
-    Route::resource('semestres', SemestreController::class);
+//     Route::resource('etudiants', EtudiantController::class);
+//     Route::resource('ues', UEController::class);
+//     Route::resource('matieres', MatiereController::class);
+//     Route::resource('users', UtilisateurController::class);
+//     Route::resource('semestres', SemestreController::class);
 
-    Route::get('/notes', [NoteController::class, 'index'])->name('admin.notes.index');
-    Route::post('/notes/recalcul', [NoteController::class, 'recalculGlobal'])->name('admin.notes.recalcul');
-    Route::get('/bulletins', [BulletinController::class, 'index'])->name('admin.bulletins.index');
-    Route::get('/jury', [JuryController::class, 'index'])->name('admin.jury.index');
-    Route::post('/jury/valider', [JuryController::class, 'valider'])->name('admin.jury.valider');
-    Route::get('/parametres', [ParametreController::class, 'index'])->name('admin.parametres.index');
+//     Route::get('/notes', [NoteController::class, 'index'])->name('admin.notes.index');
+//     Route::post('/notes/recalcul', [NoteController::class, 'recalculGlobal'])->name('admin.notes.recalcul');
+//     Route::get('/bulletins', [BulletinController::class, 'index'])->name('admin.bulletins.index');
+//     Route::get('/jury', [JuryController::class, 'index'])->name('admin.jury.index');
+//     Route::post('/jury/valider', [JuryController::class, 'valider'])->name('admin.jury.valider');
+//     Route::get('/parametres', [ParametreController::class, 'index'])->name('admin.parametres.index');
 
-    Route::get('/bulletins', [BulletinController::class, 'index'])->name('bulletins.index');
-    Route::get('/bulletins/{id}/pdf', [BulletinController::class, 'pdf'])->name('bulletins.pdf');
+//     Route::get('/bulletins', [BulletinController::class, 'index'])->name('bulletins.index');
+//     Route::get('/bulletins/{id}/pdf', [BulletinController::class, 'pdf'])->name('bulletins.pdf');
 
-    Route::get('/jury', [JuryController::class, 'index'])->name('jury.index');
-    Route::post('/jury/calcul', [JuryController::class, 'calculGlobal'])->name('jury.calcul');
-    Route::post('/jury/{id}', [JuryController::class, 'update'])->name('jury.update');
+//     Route::get('/jury', [JuryController::class, 'index'])->name('jury.index');
+//     Route::post('/jury/calcul', [JuryController::class, 'calculGlobal'])->name('jury.calcul');
+//     Route::post('/jury/{id}', [JuryController::class, 'update'])->name('jury.update');
 
-    Route::get('/notes', [NoteController::class, 'index'])->name('notes.index');
-    Route::post('/notes/store', [NoteController::class, 'store'])->name('notes.store');
-    Route::post('/notes/recalcul-global', [NoteController::class, 'recalculGlobal'])->name('notes.recalculGlobal');
-    Route::post('/notes/set-rattrapage-type', [NoteController::class, 'setRattrapageType'])->name('notes.setRattrapageType');
+//     Route::get('/notes', [NoteController::class, 'index'])->name('notes.index');
+//     Route::post('/notes/store', [NoteController::class, 'store'])->name('notes.store');
+//     Route::post('/notes/recalcul-global', [NoteController::class, 'recalculGlobal'])->name('notes.recalculGlobal');
+//     Route::post('/notes/set-rattrapage-type', [NoteController::class, 'setRattrapageType'])->name('notes.setRattrapageType');
 
-});
+ });
 
 // ---------------------------
 // Routes Deconnexion
