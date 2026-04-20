@@ -25,6 +25,12 @@ class LoginController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if ($user && Hash::check($request->password, $user->password)) {
+
+            // =========================
+            // CODE 2FA - COMMENTÉ
+            // =========================
+
+            /*
             // Générer un code 2FA
             $code = rand(100000, 999999);
 
@@ -53,14 +59,46 @@ class LoginController extends Controller
                 'info' => 'Un code de vérification a été envoyé à votre email.',
                 'show_verify_modal' => true
             ]);
+            */
+
+            // =========================
+            // CONNEXION DIRECTE (SANS 2FA)
+            // =========================
+
+            session([
+                'utilisateur_id'   => $user->id,
+                'utilisateur_nom'  => $user->first_name . ' ' . $user->last_name,
+                'role'             => $user->role->name,
+                'hospital_id'      => $user->role->name === 'superadmin' ? null : $user->hospital_id,
+            ]);
+
+            // Redirection selon rôle
+            $redirectUrl = match($user->role->name) {
+                'superadmin' => route('superadmin.dashboard'),
+                'admin' => route('admin.dashboard'),
+                'chef_service' => route('chef.dashboard'),
+                'infirmier' => route('infirmier.dashboard'),
+                'patient' => route('patient.dashboard'),
+                default => '/'
+            };
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'redirect' => $redirectUrl,
+                    'message' => 'Connexion réussie ✅'
+                ]);
+            }
+
+            return redirect($redirectUrl)->with('success', 'Connexion réussie ✅');
         }
 
-        // ❌ Mauvais identifiants - CORRECTION ICI
+        // ❌ Mauvais identifiants
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Identifiants incorrects'
-            ], ); // Ajout du code HTTP 401
+            ], 401);
         }
 
         return back()
@@ -74,6 +112,11 @@ class LoginController extends Controller
      */
     public function verify2FA(Request $request)
     {
+        // =========================
+        // 2FA - COMMENTÉ
+        // =========================
+
+        /*
         $request->validate([
             'code' => 'required|numeric',
         ]);
@@ -84,7 +127,6 @@ class LoginController extends Controller
         ) {
             $user = User::find(session('2fa_user_id'));
 
-            // Stocker infos utilisateur en session
             session([
                 'utilisateur_id'   => $user->id,
                 'utilisateur_nom'  => $user->first_name . ' ' . $user->last_name,
@@ -92,10 +134,8 @@ class LoginController extends Controller
                 'hospital_id'      => $user->role->name === 'superadmin' ? null : $user->hospital_id,
             ]);
 
-            // Nettoyer la session temporaire
             session()->forget(['2fa_code', '2fa_user_id', '2fa_expire']);
 
-            // Déterminer la redirection selon le rôle
             $redirectUrl = match($user->role->name) {
                 'superadmin' => route('superadmin.dashboard'),
                 'admin' => route('admin.dashboard'),
@@ -105,7 +145,6 @@ class LoginController extends Controller
                 default => '/'
             };
 
-            // ✅ Réponse JSON pour AJAX
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
@@ -116,30 +155,11 @@ class LoginController extends Controller
 
             return redirect($redirectUrl)->with('success', 'Connexion réussie ✅');
         }
+        */
 
-        // ❌ Code expiré
-        if (now()->greaterThanOrEqualTo(session('2fa_expire'))) {
-            session()->forget(['2fa_code', '2fa_user_id', '2fa_expire']);
-
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Code expiré, reconnectez-vous.'
-                ]);
-            }
-
-            return redirect('/')->withErrors(['code' => 'Code expiré, reconnectez-vous.']);
-        }
-
-        // ❌ Code invalide
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Code invalide'
-            ]);
-        }
-
-        return redirect('/')->withErrors(['code' => 'Code invalide'])->with('show_verify_modal', true);
+        return redirect('/')->withErrors([
+            'code' => 'La vérification 2FA est désactivée.'
+        ]);
     }
 
     /**
@@ -154,30 +174,36 @@ class LoginController extends Controller
      * Renvoyer un code 2FA
      */
     public function resendCode()
-{
-    if (session('2fa_user_id')) {
-        $user = User::find(session('2fa_user_id'));
+    {
+        // =========================
+        // 2FA - COMMENTÉ
+        // =========================
 
-        if ($user) {
-            $code = rand(100000, 999999);
+        /*
+        if (session('2fa_user_id')) {
+            $user = User::find(session('2fa_user_id'));
 
-            session([
-                '2fa_code'   => $code,
-                '2fa_expire' => now()->addMinutes(5),
-            ]);
+            if ($user) {
+                $code = rand(100000, 999999);
 
-            Mail::raw("Votre nouveau code de vérification est : $code", function ($message) use ($user) {
-                $message->to($user->email)
-                        ->subject("Nouveau code de vérification - Plateforme Hospitalière");
-            });
+                session([
+                    '2fa_code'   => $code,
+                    '2fa_expire' => now()->addMinutes(5),
+                ]);
 
-            return response()->json(['success' => true]);
+                Mail::raw("Votre nouveau code de vérification est : $code", function ($message) use ($user) {
+                    $message->to($user->email)
+                            ->subject("Nouveau code de vérification - Plateforme Hospitalière");
+                });
+
+                return response()->json(['success' => true]);
+            }
         }
-    }
+        */
 
-    return response()->json([
-        'success' => false,
-        'message' => 'Identifiant invalide'
-    ]);
-}
+        return response()->json([
+            'success' => false,
+            'message' => '2FA désactivé'
+        ]);
+    }
 }
