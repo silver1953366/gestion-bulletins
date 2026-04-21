@@ -3,11 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ue extends Model
 {
+    /**
+     * Le nom de la table associée au modèle.
+     *
+     * @var string
+     */
     protected $table = 'ues';
 
+    /**
+     * Les attributs qui sont assignables en masse.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'code',
         'libelle',
@@ -16,23 +28,64 @@ class Ue extends Model
         'credits'
     ];
 
+    /**
+     * Les attributs qui doivent être castés.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'coefficient' => 'integer',
-        'credits' => 'integer'
+        'credits' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    public function semestre()
+    /**
+     * --- RELATIONS ---
+     */
+
+    /**
+     * Obtient le semestre auquel appartient l'UE.
+     */
+    public function semestre(): BelongsTo
     {
         return $this->belongsTo(Semestre::class);
     }
 
-    public function matieres()
+    /**
+     * Obtient les matières rattachées à cette Unité d'Enseignement.
+     */
+    public function matieres(): HasMany
     {
         return $this->hasMany(Matiere::class);
     }
 
-    public function resultatsUes()
+    /**
+     * Obtient les résultats calculés pour cette UE.
+     */
+    public function resultatsUes(): HasMany
     {
         return $this->hasMany(ResultatUe::class);
+    }
+
+    /**
+     * --- ACCESSEURS (LOGIQUE MÉTIER) ---
+     */
+
+    /**
+     * Calcule dynamiquement le total des coefficients des matières.
+     * Permet de vérifier si la somme des matières correspond au coeff de l'UE.
+     */
+    public function getTotalWeightAttribute(): int
+    {
+        return $this->matieres()->sum('coefficient');
+    }
+
+    /**
+     * Formate l'affichage du code et du libellé.
+     */
+    public function getFullLabelAttribute(): string
+    {
+        return "[$this->code] $this->libelle";
     }
 }

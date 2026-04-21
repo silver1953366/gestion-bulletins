@@ -10,9 +10,14 @@ return new class extends Migration
     {
         Schema::create('enseignant_matiere', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('teacher_profile_id')->nullable()->constrained('teacher_profiles')->onDelete('cascade');
-            $table->foreignId('matiere_id')->nullable()->constrained('matieres')->onDelete('cascade');
+            // Liaison vers le profil enseignant
+            $table->foreignId('teacher_profile_id')->constrained('teacher_profiles')->onDelete('cascade');
+            // Liaison vers la matière
+            $table->foreignId('matiere_id')->constrained('matieres')->onDelete('cascade');
             $table->timestamps();
+
+            // Empêche les doublons au niveau de la base de données
+            $table->unique(['teacher_profile_id', 'matiere_id'], 'unique_teacher_matiere');
         });
     }
 

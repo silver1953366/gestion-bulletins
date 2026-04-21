@@ -27,4 +27,14 @@ class Inscription extends Model
     {
         return $this->belongsTo(AnneeAcademique::class);
     }
+    public function inscriptions()
+{
+    return $this->hasMany(Inscription::class);
+}
+
+    // Pour récupérer la classe actuelle très vite
+    public function classeActuelle()
+    {
+    return $this->inscriptions()->latest()->first()?->classe;
+    }
 }
