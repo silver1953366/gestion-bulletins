@@ -3,62 +3,83 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\Etudiant;
+use App\Models\StudentProfile;
+use App\Models\Inscription;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 
+
 class EtudiantController extends Controller
+{ 
+
+public function store(Request $request)
 {
-    public function index()
-    {
-        $etudiants = Etudiant::latest()->paginate(10);
-        return view('admin.etudiants.index', compact('etudiants'));
-    }
+    // 1. Validation
+    $request->validate([
+        'nom' => 'required',
+        'prenom' => 'required',
+        'email' => 'required|email|unique:users',
+        'password' => 'required|min:6'
+    ]);
 
-    public function create()
-    {
-        return view('admin.etudiants.create');
-    }
+    // 2. Création étudiant
+    $etudiant = Etudiant::create([
+        'nom' => $request->nom,
+        'prenom' => $request->prenom,
+        'date_naissance' => $request->date_naissance,
+        'lieu_naissance' => $request->lieu_naissance,
+        'bac' => $request->bac,
+        'provenance' => $request->provenance,
+    ]);
 
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'nom' => 'required',
-            'prenom' => 'required',
-            'email' => 'nullable|email',
-        ]);
+    // 3. Création user
+    $user = User::create([
+        'first_name' => $request->prenom,
+        'last_name' => $request->nom,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'role_id' => 4 // étudiant
+    ]);
 
-        Etudiant::create($data);
+    // 4. Lien profile
+    StudentProfile::create([
+        'user_id' => $user->id,
+        'etudiant_id' => $etudiant->id,
+        'matricule' => 'ETU' . str_pad($etudiant->id, 4, '0', STR_PAD_LEFT)
+    ]);
 
-        return redirect()->route('admin.etudiants.index')->with('success', 'Étudiant ajouté');
-    }
+    return redirect()->route('admin.etudiants.index')
+        ->with('success', 'Étudiant créé avec succès');
+}
+public function create()
+{
+    return view('admin.etudiants.create');
+}
 
-    public function show(Etudiant $etudiant)
-    {
-        return view('admin.etudiants.show', compact('etudiant'));
-    }
+public function index()
+{
+    $etudiants = Etudiant::latest()->get();
 
-    public function edit(Etudiant $etudiant)
-    {
-        return view('admin.etudiants.edit', compact('etudiant'));
-    }
+    return view('admin.etudiants.index', compact('etudiants'));
+}
 
-    public function update(Request $request, Etudiant $etudiant)
-    {
-        $data = $request->validate([
-            'nom' => 'required',
-            'prenom' => 'required',
-            'email' => 'nullable|email',
-        ]);
 
-        $etudiant->update($data);
+public function show($id)
+{
+    $etudiant = Etudiant::findOrFail($id);
 
-        return redirect()->route('admin.etudiants.index')->with('success', 'Mis à jour');
-    }
+    $profil = StudentProfile::where('etudiant_id', $id)->first();
 
-    public function destroy(Etudiant $etudiant)
-    {
-        $etudiant->delete();
+    $inscriptions = Inscription::with('classe', 'anneeAcademique')
+        ->where('etudiant_id', $id)
+        ->get();
 
-        return back()->with('success', 'Supprimé');
-    }
+    return view('admin.etudiants.show', compact(
+        'etudiant',
+        'profil',
+        'inscriptions'
+    ));
+}
 }
