@@ -12,7 +12,7 @@
             </a>
             <h1 class="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">Modifier la fiche</h1>
             <p class="text-slate-500 text-sm font-bold italic mt-1">
-                Modification des informations de : <span class="text-indigo-600">{{ $etudiant->full_name }}</span>
+                Modification des informations de : <span class="text-indigo-600">{{ $etudiant->nom }} {{ $etudiant->prenom }}</span>
             </p>
         </div>
 
@@ -57,7 +57,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Date de Naissance</label>
-                    <input type="date" name="date_naissance" value="{{ old('date_naissance', $etudiant->date_naissance ? $etudiant->date_naissance->format('Y-m-d') : '') }}" 
+                    <input type="date" name="date_naissance" value="{{ old('date_naissance', $etudiant->date_naissance ? \Carbon\Carbon::parse($etudiant->date_naissance)->format('Y-m-d') : '') }}" 
                         class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white focus:ring-0 rounded-[1.5rem] font-bold text-slate-900 transition">
                 </div>
 
