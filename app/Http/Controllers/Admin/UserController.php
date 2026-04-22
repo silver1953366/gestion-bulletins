@@ -13,13 +13,16 @@ class UserController extends Controller
 {
     public function index()
     {
-        // On charge la relation role pour éviter le problème N+1
+        // On charge la relation role pour l'affichage et on récupère les rôles pour le modal
         $users = User::with('role')->paginate(10);
-        return view('admin.users.index', compact('users'));
+        $roles = Role::all(); 
+        
+        return view('admin.users.index', compact('users', 'roles'));
     }
 
     public function create()
     {
+        // Utile si tu décides finalement d'aller sur une page dédiée
         $roles = Role::all();
         return view('admin.users.create', compact('roles'));
     }
@@ -58,10 +61,8 @@ class UserController extends Controller
             'password'   => 'nullable|min:6|confirmed',
         ]);
 
-        // Mise à jour des informations de base
         $user->fill($request->except('password'));
 
-        // Gestion du mot de passe si renseigné
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }
@@ -74,7 +75,6 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        // Sécurité : Empêcher de se supprimer soi-même
         if (auth()->id() === $user->id) {
             return back()->with('error', 'Vous ne pouvez pas supprimer votre propre compte.');
         }

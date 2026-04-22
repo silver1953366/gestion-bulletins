@@ -6,12 +6,7 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-<<<<<<< HEAD
         "php": ">=8.2",
-=======
-        "php": "8.2.12",
-        "barryvdh/laravel-dompdf": "^3.1",
->>>>>>> 6f3d284 (Initialisation ERP INPTIC : Sidebar et Layout fonctionnels)
         "laravel/framework": "^11.0",
         "laravel/tinker": "^2.9",
         "maatwebsite/excel": "^3.1"
