@@ -66,7 +66,7 @@
 
                 {{-- Zone d'injection du contenu spécifique --}}
                 <div class="animate-fade-in">
-                    {{ $slot }}
+                    @yield('content')
                 </div>
             </main>
 

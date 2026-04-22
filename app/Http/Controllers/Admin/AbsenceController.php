@@ -23,7 +23,7 @@ class AbsenceController extends Controller
 
         // Données nécessaires pour les menus déroulants dans les modales
         $etudiants = Etudiant::orderBy('nom')->get();
-        $matieres = Matiere::orderBy('nom')->get();
+        $matieres = Matiere::orderBy('libelle')->get();
 
         return view('admin.absences.index', compact('absences', 'etudiants', 'matieres'));
     }

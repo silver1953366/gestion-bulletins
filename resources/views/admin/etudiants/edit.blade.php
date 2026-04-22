@@ -1,4 +1,4 @@
-@extends('admin.layouts.master')
+@extends('components.layouts.master')
 
 @section('content')
 <div class="max-w-4xl mx-auto animate-fade-in">

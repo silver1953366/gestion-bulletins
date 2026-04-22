@@ -1,97 +1,90 @@
-@extends('admin.layouts.master')
+@extends('components.layouts.master')
 
 @section('content')
-<div class="max-w-4xl mx-auto animate-fade-in pb-12">
-    <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="max-w-5xl mx-auto animate-fade-in pb-12">
+    {{-- Header --}}
+    <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-            <a href="{{ route('admin.etudiants.index') }}" class="group inline-flex items-center gap-2 text-indigo-600 font-black text-xs uppercase tracking-widest mb-3 hover:text-indigo-800 transition">
-                <svg class="w-4 h-4 transform group-hover:-translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a href="{{ route('admin.etudiants.index') }}" class="group inline-flex items-center gap-2 text-indigo-600 font-black text-xs uppercase tracking-[0.2em] mb-4 hover:text-slate-900 transition-all">
+                <svg class="w-5 h-5 transform group-hover:-translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Retour à la liste
+                Retour
             </a>
-            <h1 class="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">Nouvelle Inscription</h1>
-            <p class="text-slate-500 text-sm font-bold italic mt-1">Enregistrement d'un nouvel étudiant dans la base de données</p>
+            <h1 class="text-5xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">
+                Nouvel <span class="text-indigo-600">Étudiant</span>
+            </h1>
         </div>
 
-        <div class="hidden md:block">
-            <div class="w-16 h-16 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" stroke-width="2" stroke-linecap="round"/></svg>
+        {{-- Affichage des erreurs système --}}
+        @if(session('error'))
+            <div class="bg-rose-50 border-l-4 border-rose-500 p-4 rounded-xl shadow-sm animate-bounce">
+                <p class="text-rose-700 text-xs font-black uppercase">Erreur : {{ session('error') }}</p>
             </div>
-        </div>
+        @endif
     </div>
 
-    <div class="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+    <div class="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
         <form action="{{ route('admin.etudiants.store') }}" method="POST" class="p-8 md:p-12 space-y-10">
             @csrf
 
-            <div class="space-y-6">
-                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
-                    <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-width="2"/></svg>
-                    </div>
-                    <h2 class="text-sm font-black text-slate-900 uppercase tracking-tighter italic">Informations d'identité</h2>
+            {{-- BLOC 1 : IDENTITÉ --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nom</label>
+                    <input type="text" name="nom" value="{{ old('nom') }}" required placeholder="ESSONE"
+                        class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl font-bold uppercase transition-all">
+                    @error('nom') <span class="text-rose-500 text-[10px] font-bold ml-4">{{ $message }}</span> @enderror
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 text-indigo-600/50">Nom de famille <span class="text-rose-500">*</span></label>
-                        <input type="text" name="nom" value="{{ old('nom') }}" required placeholder="ex: MINKO ESSONE"
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white focus:ring-0 rounded-[1.5rem] font-bold text-slate-900 transition uppercase placeholder:normal-case placeholder:font-medium">
-                        @error('nom') <p class="text-rose-500 text-[10px] font-bold ml-2 italic">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Prénoms <span class="text-rose-500">*</span></label>
-                        <input type="text" name="prenom" value="{{ old('prenom') }}" required placeholder="ex: Marc"
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white focus:ring-0 rounded-[1.5rem] font-bold text-slate-900 transition">
-                        @error('prenom') <p class="text-rose-500 text-[10px] font-bold ml-2 italic">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Date de Naissance</label>
-                        <input type="date" name="date_naissance" value="{{ old('date_naissance') }}" 
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white focus:ring-0 rounded-[1.5rem] font-bold text-slate-900 transition">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Lieu de Naissance</label>
-                        <input type="text" name="lieu_naissance" value="{{ old('lieu_naissance') }}" placeholder="ex: Libreville"
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white focus:ring-0 rounded-[1.5rem] font-bold text-slate-900 transition">
-                    </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Prénom</label>
+                    <input type="text" name="prenom" value="{{ old('prenom') }}" required placeholder="Marc"
+                        class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl font-bold transition-all">
+                    @error('prenom') <span class="text-rose-500 text-[10px] font-bold ml-4">{{ $message }}</span> @enderror
                 </div>
             </div>
 
-            <div class="space-y-6">
-                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z" stroke-width="2"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" stroke-width="2"/></svg>
-                    </div>
-                    <h2 class="text-sm font-black text-slate-900 uppercase tracking-tighter italic">Origine & Diplômes</h2>
+            {{-- BLOC 2 : ACCÈS SYSTÈME --}}
+            <div class="p-8 bg-indigo-50/50 rounded-[2rem] grid grid-cols-1 md:grid-cols-2 gap-8 border border-indigo-100/50">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-4">Email Institutionnel</label>
+                    <input type="email" name="email" value="{{ old('email') }}" required placeholder="m.essone@inptic.ga"
+                        class="w-full px-6 py-4 bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl font-bold transition-all">
+                    @error('email') <span class="text-rose-500 text-[10px] font-bold ml-4">{{ $message }}</span> @enderror
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Série du Baccalauréat</label>
-                        <input type="text" name="bac" value="{{ old('bac') }}" placeholder="ex: Série TI" 
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white focus:ring-0 rounded-[1.5rem] font-bold text-slate-900 transition">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Lycée / Établissement d'origine</label>
-                        <input type="text" name="provenance" value="{{ old('provenance') }}" placeholder="ex: Lycée Paul Indjendjet Gondjout" 
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white focus:ring-0 rounded-[1.5rem] font-bold text-slate-900 transition">
-                    </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-4">Mot de passe par défaut</label>
+                    <input type="password" name="password" required placeholder="••••••••"
+                        class="w-full px-6 py-4 bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl font-bold transition-all">
                 </div>
             </div>
 
-            <div class="pt-10 flex flex-col md:flex-row gap-4">
-                <button type="submit" class="flex-1 py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-900 hover:shadow-2xl hover:shadow-indigo-200 transition-all duration-300">
-                    Valider l'inscription de l'étudiant
+            {{-- BLOC 3 : INFOS ACADÉMIQUES --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Date de Naissance</label>
+                    <input type="date" name="date_naissance" value="{{ old('date_naissance') }}"
+                        class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl font-bold transition-all">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Série Bac</label>
+                    <input type="text" name="bac" value="{{ old('bac') }}" placeholder="TI / S / ES"
+                        class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl font-bold transition-all">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Provenance</label>
+                    <input type="text" name="provenance" value="{{ old('provenance') }}" placeholder="Lycée..."
+                        class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl font-bold transition-all">
+                </div>
+            </div>
+
+            {{-- BOUTONS --}}
+            <div class="pt-6 flex gap-4">
+                <button type="submit" class="flex-1 bg-slate-900 text-white py-6 rounded-3xl font-black uppercase text-xs tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-xl shadow-indigo-100">
+                    Enregistrer et Créer le matricule
                 </button>
-                <a href="{{ route('admin.etudiants.index') }}" class="flex-none px-10 py-5 bg-slate-100 text-slate-500 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] text-center hover:bg-slate-200 transition-all">
-                    Annuler
-                </a>
             </div>
         </form>
     </div>

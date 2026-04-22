@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\EtudiantController;
-use App\Http\Controllers\StudentProfileController;
-use App\Http\Controllers\TeacherProfileController;
+use App\Http\Controllers\Admin\StudentProfileController;
+use App\Http\Controllers\Admin\TeacherProfileController;
 use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\SemestreController;
 use App\Http\Controllers\Admin\DepartementController;
@@ -24,7 +24,7 @@ use App\Http\Controllers\Admin\ResultatMatiereController;
 use App\Http\Controllers\Admin\ResultatUeController;
 use App\Http\Controllers\Admin\ResultatSemestreController;
 use App\Http\Controllers\Admin\ResultatAnnuelController;
-use App\Http\Controllers\ImportNoteController;
+use App\Http\Controllers\Admin\ImportNoteController;
 
 /*
 |--------------------------------------------------------------------------
