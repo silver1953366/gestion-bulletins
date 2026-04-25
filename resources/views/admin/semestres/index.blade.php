@@ -1,95 +1,162 @@
 <x-app-layout>
-    <div x-data="{ 
-        showCreateModal: false, 
-        showEditModal: false,
+    <x-slot name="header">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter italic uppercase underline decoration-indigo-100 decoration-8 underline-offset-4">
+                    Configuration des Semestres
+                </h1>
+                <p class="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1 italic">
+                    Paramétrage des cycles de formation
+                </p>
+            </div>
+            <button @click="$dispatch('open-modal', 'add-semestre')" class="px-8 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition shadow-xl shadow-slate-200 group">
+                <i class="fas fa-plus mr-2 group-hover:rotate-90 transition-transform"></i> Nouveau Semestre
+            </button>
+        </div>
+    </x-slot>
+
+    <div class="py-6 space-y-6 animate-fade-in" x-data="{ 
         currentSemestre: { id: '', libelle: '', classe_id: '' },
-        openEditModal(semestre) {
-            this.currentSemestre = semestre;
-            this.showEditModal = true;
+        editSemestre(s) {
+            this.currentSemestre = s;
+            $dispatch('open-modal', 'edit-semestre');
         }
     }">
-        <x-slot name="header">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 class="text-3xl font-black text-slate-900 tracking-tighter italic">Périodes & Semestres</h1>
-                    <p class="text-slate-500 text-sm font-medium italic">Organisation temporelle des formations</p>
-                </div>
-                <button @click="showCreateModal = true" class="inline-flex items-center justify-center px-6 py-3 bg-amber-500 text-white rounded-2xl font-bold text-sm hover:bg-amber-600 transition shadow-lg shadow-amber-100 gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" stroke-linecap="round"/></svg>
-                    Nouveau Semestre
-                </button>
+        
+        @if(session('success'))
+            <div class="bg-emerald-50 border border-emerald-100 text-emerald-600 px-6 py-4 rounded-2xl font-bold text-xs uppercase tracking-tighter italic animate-bounce">
+                {{ session('success') }}
             </div>
-        </x-slot>
+        @endif
 
-        <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden animate-fade-in">
+        @if(session('error'))
+            <div class="bg-rose-50 border border-rose-100 text-rose-600 px-6 py-4 rounded-2xl font-bold text-xs uppercase tracking-tighter italic">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                        <th class="px-8 py-5">Intitulé</th>
-                        <th class="px-8 py-5">Classe / Formation</th>
-                        <th class="px-8 py-5 text-right">Actions</th>
+                    <tr class="bg-slate-50/50 border-b border-slate-100">
+                        <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Libellé (Période)</th>
+                        <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Classe Rattachée</th>
+                        <th class="px-8 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-50 text-sm">
-                    @foreach($semestres as $semestre)
+                <tbody class="divide-y divide-slate-50">
+                    @forelse($semestres as $s)
                     <tr class="hover:bg-slate-50/50 transition group">
                         <td class="px-8 py-5">
-                            <span class="font-black text-amber-600 uppercase italic">{{ $semestre->libelle }}</span>
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-[10px] font-black text-white italic">
+                                    {{ substr($s->libelle, 0, 2) }}
+                                </div>
+                                <span class="font-black text-slate-900 uppercase italic tracking-tighter">{{ $s->libelle }}</span>
+                            </div>
                         </td>
                         <td class="px-8 py-5">
-                            <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs">
-                                {{ $semestre->classe->nom ?? 'N/A' }}
+                            <span class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[9px] uppercase tracking-widest border border-indigo-100">
+                                {{ $s->classe->nom }}
                             </span>
                         </td>
-                        <td class="px-8 py-5 text-right">
-                            <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button @click="openEditModal({{ json_encode($semestre) }})" class="p-2 text-slate-400 hover:text-amber-600 transition">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-width="2" /></svg>
+                        <td class="px-8 py-5 text-right flex justify-end gap-3">
+                            <button @click="editSemestre({ id: '{{ $s->id }}', libelle: '{{ $s->libelle }}', classe_id: '{{ $s->classe_id }}' })" 
+                                    class="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white transition shadow-sm">
+                                <i class="fas fa-edit text-xs"></i>
+                            </button>
+                            
+                            <form action="{{ route('admin.semestres.destroy', $s) }}" method="POST" onsubmit="return confirm('Supprimer ce semestre ? Cette action est irréversible.')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-500 hover:text-white transition shadow-sm">
+                                    <i class="fas fa-trash text-xs"></i>
                                 </button>
-                                <form action="{{ route('admin.semestres.destroy', $semestre) }}" method="POST" onsubmit="return confirm('Supprimer ce semestre ?')">
-                                    @csrf @method('DELETE')
-                                    <button class="p-2 text-slate-400 hover:text-rose-600 transition">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" /></svg>
-                                    </button>
-                                </form>
+                            </form>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="3" class="px-8 py-20 text-center">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-calendar-times text-4xl text-slate-100 mb-4"></i>
+                                <p class="text-slate-400 font-black uppercase text-[10px] tracking-widest italic">Aucun semestre configuré</p>
                             </div>
                         </td>
                     </tr>
-                    @endforeach
+                    @endforelse
                 </tbody>
             </table>
-            <div class="px-8 py-4 bg-slate-50 border-t border-slate-100">
-                {{ $semestres->links() }}
-            </div>
         </div>
 
-        <template x-if="showCreateModal">
-            <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                <div @click.away="showCreateModal = false" class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in">
-                    <div class="px-10 py-8 border-b border-slate-100 bg-slate-50/50">
-                        <h2 class="text-2xl font-black text-slate-900 italic">Nouveau Semestre</h2>
+        <div class="mt-6 px-4">
+            {{ $semestres->links() }}
+        </div>
+
+        <x-modal name="add-semestre" focusable>
+            <form action="{{ route('admin.semestres.store') }}" method="POST" class="p-10">
+                @csrf
+                <h2 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter mb-2">Nouveau <span class="text-indigo-600">Semestre</span></h2>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-8 border-l-4 border-indigo-600 pl-4">Max 10 caractères (Ex: S1, Semestre 1)</p>
+                
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Libellé</label>
+                        <input type="text" name="libelle" maxlength="10" required placeholder="Ex: S1" 
+                               class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-[1.5rem] font-bold text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition-all">
                     </div>
-                    <form action="{{ route('admin.semestres.store') }}" method="POST" class="p-10 space-y-6">
-                        @csrf
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Libellé</label>
-                            <input type="text" name="libelle" required class="w-full px-5 py-4 bg-slate-50 border-transparent focus:border-amber-500 focus:ring-0 rounded-2xl font-bold text-sm" placeholder="Ex: Semestre 5">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigner à une Classe</label>
-                            <select name="classe_id" required class="w-full px-5 py-4 bg-slate-50 border-transparent focus:border-amber-500 focus:ring-0 rounded-2xl font-bold text-sm">
-                                <option value="">Choisir la classe...</option>
-                                @foreach($classes as $classe)
-                                    <option value="{{ $classe->id }}">{{ $classe->nom }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <button type="submit" class="w-full py-4 bg-amber-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-amber-600 transition shadow-lg mt-4">
-                            Enregistrer
-                        </button>
-                    </form>
+
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Affecter à une classe</label>
+                        <select name="classe_id" required 
+                                class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-[1.5rem] font-bold text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition-all appearance-none">
+                            <option value="">Sélectionner la classe...</option>
+                            @foreach($classes as $c)
+                                <option value="{{ $c->id }}">{{ $c->nom }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
-            </div>
-        </template>
+
+                <div class="flex justify-end items-center gap-6 mt-10">
+                    <button type="button" x-on:click="$dispatch('close')" class="font-black text-[10px] uppercase text-slate-400 hover:text-slate-600 tracking-widest transition">Annuler</button>
+                    <button type="submit" class="px-10 py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition shadow-2xl shadow-slate-200">
+                        Confirmer la création
+                    </button>
+                </div>
+            </form>
+        </x-modal>
+
+        <x-modal name="edit-semestre" focusable>
+            <form :action="'{{ route('admin.semestres.index') }}/' + currentSemestre.id" method="POST" class="p-10">
+                @csrf @method('PUT')
+                <h2 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter mb-2">Modifier <span class="text-indigo-600">Semestre</span></h2>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-8 border-l-4 border-indigo-600 pl-4">Édition des paramètres temporels</p>
+
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Libellé</label>
+                        <input type="text" name="libelle" x-model="currentSemestre.libelle" maxlength="10" required 
+                               class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-[1.5rem] font-bold text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition-all">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Classe</label>
+                        <select name="classe_id" x-model="currentSemestre.classe_id" required 
+                                class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-[1.5rem] font-bold text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition-all appearance-none">
+                            @foreach($classes as $c)
+                                <option value="{{ $c->id }}">{{ $c->nom }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end items-center gap-6 mt-10">
+                    <button type="button" x-on:click="$dispatch('close')" class="font-black text-[10px] uppercase text-slate-400 hover:text-slate-600 tracking-widest transition">Annuler</button>
+                    <button type="submit" class="px-10 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 transition shadow-2xl shadow-indigo-100">
+                        Sauvegarder les modifications
+                    </button>
+                </div>
+            </form>
+        </x-modal>
     </div>
 </x-app-layout>

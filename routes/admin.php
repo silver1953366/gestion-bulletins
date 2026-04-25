@@ -25,43 +25,42 @@ use App\Http\Controllers\Admin\ResultatUeController;
 use App\Http\Controllers\Admin\ResultatSemestreController;
 use App\Http\Controllers\Admin\ResultatAnnuelController;
 use App\Http\Controllers\Admin\ImportNoteController;
+use App\Http\Controllers\Admin\AuditLogController;
 
 /*
 |--------------------------------------------------------------------------
 | Routes d'Administration - INPTIC
 |--------------------------------------------------------------------------
-| Ce fichier centralise la gestion académique globale (LP ASUR / DAR).
-| Le middleware 'admin' garantit un accès restreint.
 */
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
 
-    // 0. DASHBOARD (Le Cerveau Statistique)
+    // 0. DASHBOARD
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // 1. GESTION DES UTILISATEURS & IDENTITÉS NUMÉRIQUES
+    // 1. GESTION DES UTILISATEURS & IDENTITÉS
     Route::resource('users', UserController::class);
     Route::resource('etudiants', EtudiantController::class);
     Route::resource('student-profiles', StudentProfileController::class)->except(['create', 'show', 'edit']);
 
-    // 2. STRUCTURES ACADÉMIQUES (Hiérarchie Institutionnelle)
+    // 2. STRUCTURES ACADÉMIQUES
     Route::resource('departements', DepartementController::class);
     Route::resource('filieres', FiliereController::class);
     Route::resource('classes', ClasseController::class);
     Route::resource('semestres', SemestreController::class);
 
-    // 3. PROGRAMME PÉDAGOGIQUE (Architecture LMD)
+    // 3. PROGRAMME PÉDAGOGIQUE (LMD)
     Route::resource('ues', UeController::class);
     Route::resource('matieres', MatiereController::class);
 
     // 4. CORPS ENSEIGNANT & ATTRIBUTIONS
     Route::resource('teachers', TeacherProfileController::class);
-    Route::resource('enseignant-matiere', EnseignantMatiereController::class)->only([
-        'index', 'store', 'destroy'
-    ]);
+    Route::resource('enseignant-matiere', EnseignantMatiereController::class)->only(['index', 'store', 'destroy']);
 
-    // 5. SYSTÈME DE NOTES (Saisie & Imports Excel)
+    // 5. SYSTÈME DE NOTES (Saisie & Imports)
     Route::prefix('evaluations')->name('evaluations.')->group(function () {
+        // La route index permet d'afficher la page de sélection (Matière/Classe)
+        Route::get('/', [EvaluationController::class, 'index'])->name('index'); 
         Route::get('/saisie', [EvaluationController::class, 'formulaireSaisie'])->name('saisie');
         Route::post('/store', [EvaluationController::class, 'store'])->name('store');
     });
@@ -72,39 +71,33 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::delete('/{importNote}', [ImportNoteController::class, 'destroy'])->name('destroy');
     });
 
-    // 6. MOTEUR DE CALCULS ACADÉMIQUES (Logique de délibération)
+    // 6. MOTEUR DE CALCULS ACADÉMIQUES
     Route::prefix('resultats')->name('resultats.')->group(function () {
-        
-        // A. MATIÈRES : Moyennes pondérées et impact des absences
         Route::prefix('matieres')->name('matieres.')->group(function () {
             Route::get('/', [ResultatMatiereController::class, 'index'])->name('index');
             Route::post('/calculer', [ResultatMatiereController::class, 'calculerPourClasse'])->name('calculer');
         });
-
-        // B. UNITES D'ENSEIGNEMENT (UE) : Validation des crédits (ECTS)
         Route::prefix('ues')->name('ues.')->group(function () {
             Route::get('/', [ResultatUeController::class, 'index'])->name('index');
             Route::post('/calculer', [ResultatUeController::class, 'calculerClasse'])->name('calculer-classe');
         });
-
-        // C. SEMESTRES : PV de délibération semestriels
         Route::prefix('semestres')->name('semestres.')->group(function () {
             Route::get('/', [ResultatSemestreController::class, 'index'])->name('index');
             Route::post('/calculer', [ResultatSemestreController::class, 'calculerClasse'])->name('calculer');
         });
     });
 
-    // 7. SUIVI ACADÉMIQUE ET DISCIPLINE
+    // 7. SUIVI ET DISCIPLINE
     Route::resource('annees', AnneeAcademiqueController::class);
     Route::resource('absences', AbsenceController::class);
 
-    // 8. JURY ET DÉLIBÉRATIONS ANNUELLES (Grand Jury)
+    // 8. JURY ET DÉLIBÉRATIONS
     Route::prefix('jury')->name('jury.')->group(function () {
         Route::get('/annuel', [ResultatAnnuelController::class, 'index'])->name('annuel.index');
         Route::post('/calculer-promo', [ResultatAnnuelController::class, 'calculerPromo'])->name('calculer-promo');
     });
 
-    // 9. GESTION DES BULLETINS (Édition PDF et Archivage)
+    // 9. BULLETINS
     Route::prefix('bulletins')->name('bulletins.')->group(function () {
         Route::get('/', [BulletinController::class, 'index'])->name('index');
         Route::get('/{bulletin}/download', [BulletinController::class, 'download'])->name('download');
@@ -112,9 +105,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         Route::post('/generate', [BulletinController::class, 'generate'])->name('generate');
     });
 
-    // 10. CONFIGURATION SYSTÈME
-    Route::resource('parametres', ParametreController::class)->only([
-        'index', 'store', 'destroy'
-    ]);
+    // 10. SÉCURITÉ ET AUDIT
+    Route::prefix('audit')->name('audit.')->group(function () {
+        Route::get('/', [AuditLogController::class, 'index'])->name('index');
+        Route::get('/{auditLog}', [AuditLogController::class, 'show'])->name('show');
+    });
+
+    // 11. CONFIGURATION SYSTÈME
+    Route::resource('parametres', ParametreController::class)->only(['index', 'store', 'destroy']);
 
 });

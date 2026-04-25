@@ -1,4 +1,12 @@
 <aside 
+    x-data="{ 
+        saveScroll() { sessionStorage.setItem('sidebar-scroll', $el.querySelector('nav').scrollTop) },
+        restoreScroll() { 
+            const position = sessionStorage.getItem('sidebar-scroll');
+            if (position) { $el.querySelector('nav').scrollTop = position; }
+        }
+    }"
+    x-init="restoreScroll()"
     :class="sidebarOpen ? 'w-72' : 'w-20'" 
     class="bg-[#0f172a] text-slate-400 transition-all duration-300 flex flex-col shadow-2xl z-50 shrink-0 h-full overflow-hidden">
     
@@ -14,7 +22,7 @@
         </div>
     </div>
 
-    <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar bg-[#0f172a]">
+    <nav @click.capture="saveScroll()" class="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar bg-[#0f172a] scroll-smooth">
         
         <div class="pb-4">
             <x-sidebar-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')" icon="fas fa-th-large" label="Tableau de Bord" />
@@ -29,6 +37,7 @@
         <x-sidebar-link :href="route('admin.departements.index')" :active="request()->routeIs('admin.departements.*')" icon="fas fa-sitemap" label="Départements" />
         <x-sidebar-link :href="route('admin.filieres.index')" :active="request()->routeIs('admin.filieres.*')" icon="fas fa-stream" label="Filières" />
         <x-sidebar-link :href="route('admin.classes.index')" :active="request()->routeIs('admin.classes.*')" icon="fas fa-school" label="Classes" />
+        <x-sidebar-link :href="route('admin.semestres.index')" :active="request()->routeIs('admin.semestres.*')" icon="fas fa-clock" label="Semestres" />
 
         <p x-show="sidebarOpen" class="text-[10px] font-black text-slate-500 uppercase px-3 pt-6 pb-2 tracking-[0.2em]">Programme (LMD)</p>
         <x-sidebar-link :href="route('admin.ues.index')" :active="request()->routeIs('admin.ues.*')" icon="fas fa-layer-group" label="Unités d'Ens. (UE)" />
@@ -36,7 +45,7 @@
         <x-sidebar-link :href="route('admin.enseignant-matiere.index')" :active="request()->routeIs('admin.enseignant-matiere.*')" icon="fas fa-link" label="Attributions" />
 
         <p x-show="sidebarOpen" class="text-[10px] font-black text-slate-500 uppercase px-3 pt-6 pb-2 tracking-[0.2em]">Notes & Examens</p>
-        <x-sidebar-link :href="route('admin.evaluations.saisie')" :active="request()->routeIs('admin.evaluations.*')" icon="fas fa-edit" label="Saisie des Notes" />
+        <x-sidebar-link :href="route('admin.evaluations.index')" :active="request()->routeIs('admin.evaluations.*')" icon="fas fa-edit" label="Saisie des Notes" />
         <x-sidebar-link :href="route('admin.imports.index')" :active="request()->routeIs('admin.imports.*')" icon="fas fa-file-import" label="Imports Excel" />
         <x-sidebar-link :href="route('admin.resultats.matieres.index')" :active="request()->routeIs('admin.resultats.*')" icon="fas fa-calculator" label="Moteur de Calcul" />
         
@@ -45,7 +54,8 @@
         <x-sidebar-link :href="route('admin.bulletins.index')" :active="request()->routeIs('admin.bulletins.*')" icon="fas fa-print" label="Bulletins de Notes" />
         <x-sidebar-link :href="route('admin.absences.index')" :active="request()->routeIs('admin.absences.*')" icon="fas fa-user-clock" label="Suivi des Absences" />
 
-        <p x-show="sidebarOpen" class="text-[10px] font-black text-slate-500 uppercase px-3 pt-6 pb-2 tracking-[0.2em]">Paramètres</p>
+        <p x-show="sidebarOpen" class="text-[10px] font-black text-slate-500 uppercase px-3 pt-6 pb-2 tracking-[0.2em]">Sécurité & Logs</p>
+        <x-sidebar-link :href="route('admin.audit.index')" :active="request()->routeIs('admin.audit.*')" icon="fas fa-fingerprint" label="Journal d'Audit" />
         <x-sidebar-link :href="route('admin.annees.index')" :active="request()->routeIs('admin.annees.*')" icon="fas fa-calendar-alt" label="Années Académiques" />
         <x-sidebar-link :href="route('admin.parametres.index')" :active="request()->routeIs('admin.parametres.*')" icon="fas fa-cogs" label="Configuration" />
 
