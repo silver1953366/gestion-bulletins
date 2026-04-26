@@ -8,12 +8,12 @@
     }"
     x-init="restoreScroll()"
     :class="sidebarOpen ? 'w-72' : 'w-20'" 
-    class="bg-[#0f172a] text-slate-400 transition-all duration-300 flex flex-col shadow-2xl z-50 shrink-0 h-full overflow-hidden">
+    class="bg-[#0f172a] text-slate-400 transition-all duration-300 flex flex-col shadow-2xl z-50 shrink-0 h-screen overflow-hidden sticky top-0">
     
     <div class="h-20 flex items-center px-6 gap-3 border-b border-slate-800 shrink-0 bg-[#0f172a]">
         <div class="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332-4.5 1.253" />
             </svg>
         </div>
         <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200" class="flex flex-col overflow-hidden whitespace-nowrap">

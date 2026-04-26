@@ -16,12 +16,14 @@ class User extends Authenticatable
 
     /**
      * Attributs assignables en masse.
+     * Correspond exactement à ta migration (first_name, last_name, etc.)
      */
     protected $fillable = [
         'first_name',
         'last_name',
         'email',
         'password',
+        'photo',
         'role_id',
     ];
 
@@ -34,7 +36,8 @@ class User extends Authenticatable
     ];
 
     /**
-     * Conversion des types de colonnes.
+     * Conversion automatique des types.
+     * Le cast 'hashed' sur le password permet de ne plus faire Hash::make() dans le controller.
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -49,8 +52,8 @@ class User extends Authenticatable
      */
 
     /**
-     * Retourne le nom complet formaté.
-     * Utilisation : $user->full_name
+     * Retourne le nom complet formaté (Minko Marc).
+     * Utilisation dans Blade : {{ $user->full_name }}
      */
     protected function fullName(): Attribute
     {
@@ -64,15 +67,15 @@ class User extends Authenticatable
      */
 
     /**
-     * Rôle système de l'utilisateur (Admin, Enseignant, Etudiant).
+     * Rôle système (Relation : Un utilisateur appartient à un Rôle).
      */
     public function role(): BelongsTo
     {
-        return $this->belongsTo(Role::class);
+        return $this->belongsTo(Role::class, 'role_id');
     }
 
     /**
-     * Profil académique si l'utilisateur est un étudiant.
+     * Profil académique (si l'utilisateur est un étudiant).
      */
     public function studentProfile(): HasOne
     {
@@ -80,7 +83,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Profil professionnel si l'utilisateur est un enseignant.
+     * Profil professionnel (si l'utilisateur est un enseignant).
      */
     public function teacherProfile(): HasOne
     {
@@ -88,7 +91,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Évaluations créées par cet utilisateur (si Admin/Enseignant).
+     * Évaluations créées (si l'utilisateur est Admin ou Enseignant).
      */
     public function evaluationsCreated(): HasMany
     {
@@ -104,7 +107,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Historique des imports de notes effectués.
+     * Historique des imports de notes.
      */
     public function importsNotes(): HasMany
     {
@@ -112,7 +115,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Logs d'audit liés aux actions de l'utilisateur.
+     * Logs d'audit.
      */
     public function auditLogs(): HasMany
     {
@@ -125,17 +128,35 @@ class User extends Authenticatable
 
     /**
      * Vérifie si l'utilisateur possède un rôle spécifique.
+     * @param string $roleNom (ex: 'admin', 'etudiant', 'enseignant')
      */
-    public function hasRole(string $roleSlug): bool
+    public function hasRole(string $roleNom): bool
     {
-        return $this->role && $this->role->slug === $roleSlug;
+        // On utilise la méthode facultative ?. de PHP 8 pour éviter les erreurs si role est null
+        return strtolower($this->role?->nom ?? '') === strtolower($roleNom);
     }
 
     /**
-     * Vérifie si l'utilisateur est Administrateur.
+     * Raccourci pour vérifier si l'utilisateur est Administrateur.
      */
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
+    }
+
+    /**
+     * Raccourci pour vérifier si l'utilisateur est Étudiant.
+     */
+    public function isEtudiant(): bool
+    {
+        return $this->hasRole('etudiant');
+    }
+
+    /**
+     * Raccourci pour vérifier si l'utilisateur est Enseignant.
+     */
+    public function isEnseignant(): bool
+    {
+        return $this->hasRole('enseignant');
     }
 }

@@ -1,3 +1,52 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+    /* 1. PERSONNALISATION DE LA SCROLLBAR (Navigation Sidebar) */
+    /* Pour Chrome, Safari et Edge */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px; /* Très fin pour l'élégance */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #1e293b; /* Couleur ardoise foncée */
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #4f46e5; /* Indigo au survol */
+    }
+
+    /* Pour Firefox */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #1e293b transparent;
+    }
+
+    /* 2. EFFETS DE TRANSITION POUR LE TEXTE */
+    /* Évite le clignotement ou le décalage brutal du texte lors du collapse */
+    .sidebar-text {
+        @apply transition-opacity duration-300 ease-in-out;
+    }
+
+    /* 3. DESIGN DES LIENS ACTIFS (Optionnel si non géré en Inline) */
+    .active-link-shadow {
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+    }
+}
+
+/* 4. AJUSTEMENT POUR LE CONTENU PRINCIPAL */
+/* Si tu as un layout où le contenu doit s'adapter à la largeur de la sidebar */
+.main-content-transition {
+    @apply transition-all duration-300 ease-in-out;
+}
+
+/* Empêcher le scroll horizontal sur toute la page lors des transitions */
+body {
+    @apply overflow-x-hidden;
+}

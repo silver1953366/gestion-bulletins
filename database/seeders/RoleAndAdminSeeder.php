@@ -16,7 +16,7 @@ class RoleAndAdminSeeder extends Seeder
         $roles = [
             'admin',
             'enseignant',
-            'secretaire',
+            's.pedagogique',
             'etudiant'
         ];
 

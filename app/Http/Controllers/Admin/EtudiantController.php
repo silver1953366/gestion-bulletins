@@ -6,25 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Etudiant;
 use App\Models\StudentProfile;
-use App\Models\Inscription;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class EtudiantController extends Controller
-{ 
+{
     /**
-     * Liste des étudiants avec pagination
+     * Affiche la liste des étudiants avec pagination.
      */
     public function index()
     {
-        // On utilise la pagination pour éviter de charger 500 étudiants d'un coup
-        $etudiants = Etudiant::latest()->paginate(10);
+        // On charge les relations 'studentProfile.user' pour éviter le problème de requêtes N+1
+        // Cela permet d'afficher le matricule et l'email dans la liste sans ralentir le serveur.
+        $etudiants = Etudiant::with('studentProfile.user')->latest()->paginate(10);
+        
         return view('admin.etudiants.index', compact('etudiants'));
     }
 
     /**
-     * Formulaire de création
+     * Affiche le formulaire de création d'un étudiant.
      */
     public function create()
     {
@@ -32,113 +34,154 @@ class EtudiantController extends Controller
     }
 
     /**
-     * Enregistrement complet : Compte User + Fiche Etudiant + Profil
+     * Enregistre un étudiant : crée la fiche Etudiant, le User et le StudentProfile.
      */
     public function store(Request $request)
     {
-        // 1. Validation stricte
+        // 1. Validation des données
         $request->validate([
-            'nom' => 'required|string|max:255',
-            'prenom' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|min:6',
+            'nom'            => 'required|string|max:255',
+            'prenom'         => 'required|string|max:255',
+            'email'          => 'required|email|unique:users,email',
+            'password'       => 'required|min:6',
             'date_naissance' => 'nullable|date',
             'lieu_naissance' => 'nullable|string|max:255',
+            'bac'            => 'nullable|string|max:100',
+            'provenance'     => 'nullable|string|max:255',
         ]);
 
         try {
+            // Utilisation d'une transaction pour garantir l'intégrité des données
             return DB::transaction(function () use ($request) {
-                // 2. Création de la fiche technique (Etudiant)
+                
+                // 2. Création de la fiche "Métier" (Table etudiants)
                 $etudiant = Etudiant::create([
-                    'nom' => strtoupper($request->nom), // On force le nom en majuscules (standard INPTIC)
-                    'prenom' => $request->prenom,
+                    'nom'            => strtoupper($request->nom), // Norme : Nom en majuscules
+                    'prenom'         => $request->prenom,
                     'date_naissance' => $request->date_naissance,
                     'lieu_naissance' => $request->lieu_naissance,
-                    'bac' => $request->bac,
-                    'provenance' => $request->provenance,
+                    'bac'            => $request->bac,
+                    'provenance'     => $request->provenance,
                 ]);
 
-                // 3. Création du compte de connexion (User)
+                // 3. Création du compte de connexion (Table users)
                 $user = User::create([
                     'first_name' => $request->prenom,
-                    'last_name' => strtoupper($request->nom),
-                    'email' => $request->email,
-                    'password' => Hash::make($request->password),
-                    'role_id' => 4 // ID correspondant au rôle Étudiant dans ta base
+                    'last_name'  => strtoupper($request->nom),
+                    'email'      => $request->email,
+                    'password'   => Hash::make($request->password),
+                    'role_id'    => 4, // ID supposé du rôle 'Étudiant'
                 ]);
 
-                // 4. Création du profil académique et génération du matricule
+                // 4. Création du profil académique (Table student_profiles)
+                // C'est ici qu'on génère le matricule unique
                 StudentProfile::create([
-                    'user_id' => $user->id,
+                    'user_id'     => $user->id,
                     'etudiant_id' => $etudiant->id,
-                    'matricule' => 'INPTIC-' . date('Y') . '-' . str_pad($etudiant->id, 4, '0', STR_PAD_LEFT)
+                    'matricule'   => 'INPTIC-' . date('Y') . '-' . str_pad($etudiant->id, 4, '0', STR_PAD_LEFT),
                 ]);
 
                 return redirect()->route('admin.etudiants.index')
-                    ->with('success', "L'étudiant {$etudiant->nom} a été créé avec son compte utilisateur.");
+                    ->with('success', "L'étudiant {$etudiant->nom} a été enregistré avec son compte utilisateur.");
             });
+
         } catch (\Exception $e) {
-            return back()->withInput()->with('error', 'Erreur : ' . $e->getMessage());
+            // En cas d'erreur, on revient en arrière avec les saisies
+            return back()->withInput()->with('error', 'Erreur lors de la création : ' . $e->getMessage());
         }
     }
 
     /**
-     * Fiche détaillée
+     * Affiche les détails d'un étudiant (Fiche, Profil, Inscriptions).
      */
     public function show(Etudiant $etudiant)
     {
-        // On charge les relations pour éviter les requêtes SQL en boucle (N+1)
-        $etudiant->load(['studentProfile', 'inscriptions.classe']);
+        // On charge les relations nécessaires pour la fiche détaillée
+        $etudiant->load(['studentProfile.user', 'inscriptions.classe']);
 
         return view('admin.etudiants.show', compact('etudiant'));
     }
 
     /**
-     * Formulaire d'édition
+     * Affiche le formulaire de modification.
      */
     public function edit(Etudiant $etudiant)
     {
+        // On charge le user lié pour pouvoir modifier l'email dans le formulaire
+        $etudiant->load('studentProfile.user');
         return view('admin.etudiants.edit', compact('etudiant'));
     }
 
     /**
-     * Mise à jour des informations
+     * Met à jour les informations de l'étudiant et de son compte utilisateur.
      */
     public function update(Request $request, Etudiant $etudiant)
     {
-        $data = $request->validate([
-            'nom' => 'required|string|max:255',
+        // Récupération de l'utilisateur associé via le profil
+        $user = $etudiant->studentProfile->user;
+
+        // Validation (on ignore l'ID actuel pour l'unicité de l'email)
+        $request->validate([
+            'nom'    => 'required|string|max:255',
             'prenom' => 'required|string|max:255',
+            'email'  => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'date_naissance' => 'nullable|date',
-            'lieu_naissance' => 'nullable|string|max:255',
-            'bac' => 'nullable|string|max:100',
-            'provenance' => 'nullable|string|max:255',
         ]);
 
-        $etudiant->update($data);
+        try {
+            DB::transaction(function () use ($request, $etudiant, $user) {
+                // Mise à jour de la fiche étudiant
+                $etudiant->update([
+                    'nom'            => strtoupper($request->nom),
+                    'prenom'         => $request->prenom,
+                    'date_naissance' => $request->date_naissance,
+                    'lieu_naissance' => $request->lieu_naissance,
+                    'bac'            => $request->bac,
+                    'provenance'     => $request->provenance,
+                ]);
 
-        return redirect()->route('admin.etudiants.index')
-            ->with('success', 'Fiche mise à jour avec succès.');
+                // Mise à jour synchronisée du compte utilisateur
+                $user->update([
+                    'first_name' => $request->prenom,
+                    'last_name'  => strtoupper($request->nom),
+                    'email'      => $request->email,
+                ]);
+            });
+
+            return redirect()->route('admin.etudiants.index')
+                ->with('success', "Les informations de l'étudiant ont été mises à jour.");
+
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Erreur lors de la mise à jour.');
+        }
     }
 
     /**
-     * Suppression (avec transaction pour la sécurité des données)
+     * Supprime l'étudiant, son profil et son compte utilisateur.
      */
     public function destroy(Etudiant $etudiant)
     {
         try {
             DB::transaction(function () use ($etudiant) {
-                // Supprimer le profil et l'utilisateur lié si nécessaire
                 if ($etudiant->studentProfile) {
                     $user = $etudiant->studentProfile->user;
+                    
+                    // 1. On supprime d'abord le profil (table pivot/liaison)
                     $etudiant->studentProfile->delete();
-                    if ($user) $user->delete();
+                    
+                    // 2. On supprime le compte de connexion
+                    if ($user) {
+                        $user->delete();
+                    }
                 }
+
+                // 3. Enfin, on supprime la fiche étudiant
                 $etudiant->delete();
             });
 
             return redirect()->route('admin.etudiants.index')
-                ->with('success', 'Étudiant et compte utilisateur supprimés.');
+                ->with('success', 'Étudiant et compte associé supprimés avec succès.');
+
         } catch (\Exception $e) {
             return back()->with('error', 'Erreur lors de la suppression.');
         }

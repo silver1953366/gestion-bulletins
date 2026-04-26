@@ -44,8 +44,8 @@ class UeController extends Controller
             return redirect()->route('admin.ues.index')
                 ->with('success', "L'UE {$validated['code']} a été créée avec succès.");
         } catch (\Exception $e) {
-            return back()->with('error', "Erreur lors de la création : " . $e->getMessage());
-        }
+    dd($e->getMessage(), $e->getTraceAsString()); // Arrête tout et affiche l'erreur
+}
     }
 
     /**
