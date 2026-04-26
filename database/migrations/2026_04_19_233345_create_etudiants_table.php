@@ -10,12 +10,22 @@ return new class extends Migration
     {
         Schema::create('etudiants', function (Blueprint $table) {
             $table->id();
-            $table->string('nom', 100)->nullable();
-            $table->string('prenom', 100)->nullable();
+            // Informations d'identité
+            $table->string('nom', 100);
+            $table->string('prenom', 100);
             $table->date('date_naissance')->nullable();
             $table->string('lieu_naissance', 100)->nullable();
+            
+            // Photo de profil
+            $table->string('photo')->nullable(); // Ajout de la colonne photo
+            
+            // Informations académiques (à remplir lors de la finalisation)
             $table->string('bac', 50)->nullable();
             $table->string('provenance', 100)->nullable();
+            
+            // Système de flux : permet de savoir si l'admin a fini l'inscription
+            $table->boolean('is_finalized')->default(false);
+            
             $table->timestamps();
         });
     }

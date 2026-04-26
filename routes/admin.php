@@ -51,10 +51,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Gestion des comptes de connexion (Login/Email/Rôles)
     Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
     
-    // Gestion des dossiers administratifs étudiants (Matricule, Niveau...)
+    // Gestion des dossiers étudiants
+    // Note : On ajoute la route de finalisation AVANT le resource pour éviter les conflits
+    Route::post('/etudiants/finalize/{id}', [EtudiantController::class, 'finalize'])->name('etudiants.finalize');
     Route::resource('etudiants', EtudiantController::class)->except(['create', 'show', 'edit']);
     
-    // Profils détaillés (si séparés de la ressource étudiants)
+    // Profils détaillés
     Route::resource('student-profiles', StudentProfileController::class)->except(['create', 'show', 'edit']);
 
 
@@ -70,20 +72,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // ---------------------------------------------------------
     // 3. PROGRAMME PÉDAGOGIQUE (LMD)
     // ---------------------------------------------------------
-    // Unités d'Enseignement (ex: UE Fondamentale)
     Route::resource('ues', UeController::class)->except(['create', 'show', 'edit']);
-    
-    // Matières rattachées aux UEs avec leurs crédits et coefficients
     Route::resource('matieres', MatiereController::class)->except(['create', 'show', 'edit']);
 
 
     // ---------------------------------------------------------
     // 4. CORPS ENSEIGNANT & ATTRIBUTIONS
     // ---------------------------------------------------------
-    // Profils des enseignants
     Route::resource('teachers', TeacherProfileController::class)->except(['create', 'show', 'edit']);
-    
-    // Association des enseignants aux matières (Attributions)
     Route::resource('enseignant-matiere', EnseignantMatiereController::class)->only(['index', 'store', 'destroy']);
 
 
@@ -91,15 +87,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // 5. SYSTÈME DE NOTES (Saisie & Imports)
     // ---------------------------------------------------------
     Route::prefix('evaluations')->name('evaluations.')->group(function () {
-        // Choix de la matière et de la classe
         Route::get('/', [EvaluationController::class, 'index'])->name('index'); 
-        // Formulaire de saisie dynamique
         Route::get('/saisie', [EvaluationController::class, 'formulaireSaisie'])->name('saisie');
-        // Sauvegarde des notes
         Route::post('/store', [EvaluationController::class, 'store'])->name('store');
     });
 
-    // Importation massive via fichiers Excel
     Route::prefix('imports')->name('imports.')->group(function () {
         Route::get('/', [ImportNoteController::class, 'index'])->name('index');
         Route::post('/store', [ImportNoteController::class, 'store'])->name('store');
@@ -112,19 +104,16 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // ---------------------------------------------------------
     Route::prefix('resultats')->name('resultats.')->group(function () {
         
-        // Calcul des moyennes par matière (CC + Examen)
         Route::prefix('matieres')->name('matieres.')->group(function () {
             Route::get('/', [ResultatMatiereController::class, 'index'])->name('index');
             Route::post('/calculer', [ResultatMatiereController::class, 'calculerPourClasse'])->name('calculer');
         });
 
-        // Calcul des moyennes par Unité d'Enseignement (UE)
         Route::prefix('ues')->name('ues.')->group(function () {
             Route::get('/', [ResultatUeController::class, 'index'])->name('index');
             Route::post('/calculer', [ResultatUeController::class, 'calculerClasse'])->name('calculer-classe');
         });
 
-        // Calcul des moyennes Semestrielles (S1/S2 ou S5/S6)
         Route::prefix('semestres')->name('semestres.')->group(function () {
             Route::get('/', [ResultatSemestreController::class, 'index'])->name('index');
             Route::post('/calculer', [ResultatSemestreController::class, 'calculerClasse'])->name('calculer');
@@ -135,10 +124,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // ---------------------------------------------------------
     // 7. SUIVI, DISCIPLINE & TEMPS
     // ---------------------------------------------------------
-    // Définition des années (ex: 2024-2025)
     Route::resource('annees', AnneeAcademiqueController::class)->except(['create', 'show', 'edit']);
-    
-    // Gestion des absences étudiants
     Route::resource('absences', AbsenceController::class)->except(['create', 'show', 'edit']);
 
 
@@ -167,7 +153,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // ---------------------------------------------------------
     Route::prefix('audit')->name('audit.')->group(function () {
         Route::get('/', [AuditLogController::class, 'index'])->name('index');
-        // On garde 'show' ici pour consulter le détail d'une action suspecte
         Route::get('/{auditLog}', [AuditLogController::class, 'show'])->name('show');
     });
 
@@ -175,7 +160,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // ---------------------------------------------------------
     // 11. CONFIGURATION SYSTÈME
     // ---------------------------------------------------------
-    // Paramètres généraux (Logo, signature, noms des responsables)
     Route::resource('parametres', ParametreController::class)->only(['index', 'store', 'destroy']);
 
 });

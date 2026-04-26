@@ -11,21 +11,31 @@ class Etudiant extends Model
 {
     use HasFactory;
 
+    /**
+     * Les attributs qui peuvent être assignés en masse.
+     * Note : 'photo' et 'is_finalized' sont cruciaux pour le suivi du dossier.
+     */
     protected $fillable = [
         'nom',
         'prenom',
         'date_naissance',
         'lieu_naissance',
         'bac',
-        'provenance'
+        'provenance',
+        'photo',          // Permet l'enregistrement du chemin de l'image
+        'is_finalized'    // Permet de basculer le statut de "Attente" à "Finalisé"
     ];
 
+    /**
+     * Le transtypage des attributs.
+     */
     protected $casts = [
         'date_naissance' => 'date:Y-m-d',
+        'is_finalized'   => 'boolean', // Assure que la valeur soit traitée comme un vrai booléen
     ];
 
     /* -------------------------------------------------------------------------- */
-    /* ACCESSEURS                                 */
+    /* ACCESSEURS                                                                 */
     /* -------------------------------------------------------------------------- */
 
     /**
@@ -46,9 +56,12 @@ class Etudiant extends Model
     }
 
     /* -------------------------------------------------------------------------- */
-    /* RELATIONS STRUCTURELLES                           */
+    /* RELATIONS STRUCTURELLES                                                    */
     /* -------------------------------------------------------------------------- */
 
+    /**
+     * Lien vers le profil académique contenant le matricule
+     */
     public function studentProfile(): HasOne
     {
         return $this->hasOne(StudentProfile::class);
@@ -65,7 +78,7 @@ class Etudiant extends Model
     }
 
     /* -------------------------------------------------------------------------- */
-    /* RELATIONS PÉDAGOGIQUES                            */
+    /* RELATIONS PÉDAGOGIQUES                                                    */
     /* -------------------------------------------------------------------------- */
 
     /**
@@ -85,7 +98,7 @@ class Etudiant extends Model
     }
 
     /* -------------------------------------------------------------------------- */
-    /* RELATIONS DE RÉSULTATS                            */
+    /* RELATIONS DE RÉSULTATS                                                    */
     /* -------------------------------------------------------------------------- */
 
     public function resultatsMatieres(): HasMany 

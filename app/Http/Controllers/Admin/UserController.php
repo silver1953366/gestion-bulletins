@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Etudiant;
+use App\Models\StudentProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -24,52 +27,68 @@ class UserController extends Controller
     }
 
     /**
-     * Stocke un nouvel utilisateur.
+     * Stocke un nouvel utilisateur et initialise le profil si nécessaire.
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:100',
-            'last_name'  => 'required|string|max:100',
+        $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name'  => 'required|string|max:255',
             'email'      => 'required|email|unique:users,email',
-            'password'   => 'required|min:4|confirmed',
+            'password'   => 'required|min:4',
             'role_id'    => 'required|exists:roles,id',
             'photo'      => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
         try {
-            $user = DB::transaction(function () use ($request, $validated) {
-                $path = null;
+            $result = DB::transaction(function () use ($request) {
+                
+                // 1. Gestion de la photo au moment de la création
+                $photoPath = null;
                 if ($request->hasFile('photo')) {
-                    $path = $request->file('photo')->store('users-photos', 'public');
+                    $photoPath = $request->file('photo')->store('users-photos', 'public');
                 }
 
-                // Le mot de passe est hashé automatiquement via le cast 'hashed' dans le modèle User
-                return User::create([
-                    'first_name' => $validated['first_name'],
-                    'last_name'  => strtoupper($validated['last_name']),
-                    'email'      => $validated['email'],
-                    'password'   => $validated['password'], 
-                    'role_id'    => $validated['role_id'],
-                    'photo'      => $path,
+                // 2. Création du compte utilisateur
+                $user = User::create([
+                    'first_name' => $request->first_name,
+                    'last_name'  => strtoupper($request->last_name),
+                    'email'      => $request->email,
+                    'password'   => Hash::make($request->password),
+                    'role_id'    => $request->role_id,
+                    'photo'      => $photoPath,
                 ]);
+
+                $etudiantId = null;
+
+                // 3. Logique spécifique au rôle Étudiant (ID 4)
+                if ($user->role_id == 4) {
+                    $etudiant = Etudiant::create([
+                        'nom'          => strtoupper($request->last_name),
+                        'prenom'       => $request->first_name,
+                        'is_finalized' => false
+                    ]);
+
+                    StudentProfile::create([
+                        'user_id'     => $user->id,
+                        'etudiant_id' => $etudiant->id,
+                        'matricule'   => 'TEMP-' . str_pad($etudiant->id, 4, '0', STR_PAD_LEFT)
+                    ]);
+
+                    $etudiantId = $etudiant->id;
+                }
+
+                return ['user' => $user, 'etudiant_id' => $etudiantId];
             });
 
-            // Logique de redirection selon le rôle (étudiant, enseignant, etc.)
-            $roleNom = strtolower($user->role->nom ?? '');
-
-            if ($roleNom === 'etudiant') {
-                return redirect()->route('admin.etudiants.index', ['new_user_id' => $user->id])
-                    ->with('success', "Compte étudiant créé. Veuillez compléter son profil académique.");
-            }
-
-            if ($roleNom === 'enseignant') {
-                return redirect()->route('admin.teachers.index', ['new_user_id' => $user->id])
-                    ->with('success', "Compte enseignant créé. Veuillez compléter son profil professionnel.");
+            // Redirection vers la finalisation si c'est un étudiant
+            if ($result['etudiant_id']) {
+                return redirect()->route('admin.etudiants.index', ['finalize' => $result['etudiant_id']])
+                    ->with('success', "Compte créé. Veuillez finaliser le dossier académique de l'étudiant.");
             }
 
             return redirect()->route('admin.users.index')
-                ->with('success', "L'utilisateur {$user->first_name} a été créé avec succès.");
+                ->with('success', "Utilisateur {$result['user']->first_name} créé avec succès.");
 
         } catch (\Exception $e) {
             return back()->withInput()->with('error', "Erreur lors de la création : " . $e->getMessage());
@@ -81,7 +100,6 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        // On rend le mot de passe 'nullable' pour permettre la modification sans changer le pass
         $validated = $request->validate([
             'first_name' => 'required|string|max:100',
             'last_name'  => 'required|string|max:100',
@@ -93,7 +111,7 @@ class UserController extends Controller
 
         try {
             DB::transaction(function () use ($request, $validated, $user) {
-                // Gestion de la nouvelle photo
+                // Gestion de la photo (Update)
                 if ($request->hasFile('photo')) {
                     if ($user->photo) {
                         Storage::disk('public')->delete($user->photo);
@@ -106,12 +124,19 @@ class UserController extends Controller
                 $user->email      = $validated['email'];
                 $user->role_id    = $validated['role_id'];
 
-                // Mise à jour du mot de passe uniquement s'il est renseigné
                 if (!empty($validated['password'])) {
-                    $user->password = $validated['password'];
+                    $user->password = Hash::make($validated['password']);
                 }
 
                 $user->save();
+
+                // Optionnel : Synchroniser avec la table etudiant si l'utilisateur est un étudiant
+                if ($user->studentProfile && $user->studentProfile->etudiant) {
+                    $user->studentProfile->etudiant->update([
+                        'nom'    => strtoupper($validated['last_name']),
+                        'prenom' => $validated['first_name'],
+                    ]);
+                }
             });
 
             return redirect()->route('admin.users.index')
@@ -127,26 +152,31 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        // Sécurité : Ne pas se supprimer soi-même
         if (auth()->id() === $user->id) {
             return back()->with('error', "Action impossible : vous ne pouvez pas supprimer votre propre compte.");
         }
 
         try {
             DB::transaction(function () use ($user) {
-                // Supprimer la photo physiquement du stockage
+                // 1. Suppression de la photo physique
                 if ($user->photo) {
                     Storage::disk('public')->delete($user->photo);
                 }
 
-                // Suppression en cascade des profils liés pour éviter les erreurs SQL (Integrity Constraint)
+                // 2. Suppression des profils rattachés
                 if ($user->studentProfile) {
-                    $user->studentProfile()->delete();
+                    // On peut aussi supprimer l'entrée dans la table 'etudiants' ici si nécessaire
+                    if ($user->studentProfile->etudiant) {
+                        $user->studentProfile->etudiant->delete();
+                    }
+                    $user->studentProfile->delete();
                 }
+                
                 if ($user->teacherProfile) {
                     $user->teacherProfile()->delete();
                 }
                 
+                // 3. Suppression finale de l'utilisateur
                 $user->delete();
             });
 
@@ -154,7 +184,7 @@ class UserController extends Controller
                 ->with('success', "Utilisateur et données associées supprimés.");
 
         } catch (\Exception $e) {
-            return back()->with('error', "Erreur de suppression : cet utilisateur possède peut-être des données liées (notes, absences) protégées.");
+            return back()->with('error', "Erreur de suppression : l'utilisateur possède peut-être des données protégées.");
         }
     }
 }
