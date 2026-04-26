@@ -4,7 +4,7 @@
             <h2 class="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">
                 Gestion des <span class="text-indigo-600">Utilisateurs</span>
             </h2>
-            <button @click="$dispatch('open-modal', 'create-user')" 
+            <button @click="roleSelected = ''; $dispatch('open-modal', 'create-user')" 
                     class="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition shadow-lg flex items-center gap-2">
                 <i class="fas fa-plus"></i> Nouvel Utilisateur
             </button>
@@ -32,11 +32,6 @@
             this.roleSelected = e.target.options[e.target.selectedIndex].text.toLowerCase();
         }
     }" 
-    x-init="
-        @if($errors->any() && !old('_method'))
-            $nextTick(() => $dispatch('open-modal', 'create-user'));
-        @endif
-    "
     class="py-12 max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
         {{-- Notifications Flash --}}
@@ -52,7 +47,7 @@
             </div>
         @endif
 
-        {{-- Table --}}
+        {{-- Table des Utilisateurs --}}
         <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mt-8">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -117,113 +112,135 @@
             {{ $users->links() }}
         </div>
 
-        {{-- ========================================== --}}
-        {{-- MODAL CRÉATION --}}
-        {{-- ========================================== --}}
-        <x-modal name="create-user" focusable>
-            <div class="p-0 max-h-[90vh] overflow-y-auto custom-scrollbar">
-                <div class="p-10">
-                    <div class="flex items-center justify-between mb-8 sticky top-0 bg-white z-10 pb-4 border-b border-slate-50">
-                        <div>
-                            <h2 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Nouveau <span class="text-indigo-600">Profil</span></h2>
-                            <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1 italic">Remplissez les informations de base</p>
+       {{-- ========================================== --}}
+{{-- MODAL CRÉATION (V.2 OPTIMISÉE) --}}
+{{-- ========================================== --}}
+<x-modal name="create-user" focusable>
+    <div class="p-0 max-h-[95vh] overflow-y-auto no-scrollbar bg-white">
+        <div class="p-8">
+            {{-- Header --}}
+            <div class="flex items-center justify-between mb-8 sticky top-0 bg-white/90 backdrop-blur-sm z-10 pb-4 border-b border-slate-100">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">
+                        Nouvel <span class="text-indigo-600">Accès</span>
+                    </h2>
+                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Enregistrement INPTIC 2026</p>
+                </div>
+                <button @click="$dispatch('close')" class="w-10 h-10 rounded-2xl bg-slate-50 text-slate-400 hover:text-rose-500 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form action="{{ route('admin.users.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                @csrf
+                
+                {{-- Section Identité --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Prénom</label>
+                        <input type="text" name="first_name" value="{{ old('first_name') }}" required 
+                            class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[1.5rem] font-bold text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition shadow-inner">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Nom de famille</label>
+                        <input type="text" name="last_name" value="{{ old('last_name') }}" required 
+                            class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[1.5rem] font-bold text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition shadow-inner" style="text-transform: uppercase;">
+                    </div>
+                </div>
+
+                {{-- Email et Rôle --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Email Professionnel</label>
+                        <input type="email" name="email" value="{{ old('email') }}" required 
+                            class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[1.5rem] font-bold text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition shadow-inner">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Rôle Système</label>
+                        <select name="role_id" id="role_selector" required 
+                            @change="roleSelected = $el.options[$el.selectedIndex].text.toLowerCase()"
+                            class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[1.5rem] font-bold text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition shadow-inner appearance-none">
+                            <option value="" disabled selected>Choisir un rôle...</option>
+                            @foreach($roles as $role)
+                                <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>{{ $role->nom }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                {{-- Alertes Dynamiques (Correction du bug d'affichage) --}}
+                <div x-show="roleSelected !== ''" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform -translate-y-2">
+                    <template x-if="roleSelected.includes('etudiant') || roleSelected.includes('étudiant')">
+                        <div class="p-4 bg-amber-50 border-l-4 border-amber-400 rounded-r-2xl flex items-center gap-4 shadow-sm">
+                            <div class="w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center text-white shrink-0">
+                                <i class="fas fa-graduation-cap text-xs"></i>
+                            </div>
+                            <p class="text-[10px] font-black text-amber-900 uppercase tracking-tight">
+                                <span class="opacity-50">Note :</span> Redirection vers le profil académique après validation.
+                            </p>
                         </div>
-                        <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-                            <i class="fas fa-user-plus text-xl"></i>
+                    </template>
+
+                    <template x-if="roleSelected.includes('enseignant')">
+                        <div class="p-4 bg-indigo-50 border-l-4 border-indigo-400 rounded-r-2xl flex items-center gap-4 shadow-sm">
+                            <div class="w-8 h-8 bg-indigo-400 rounded-full flex items-center justify-center text-white shrink-0">
+                                <i class="fas fa-chalkboard-teacher text-xs"></i>
+                            </div>
+                            <p class="text-[10px] font-black text-indigo-900 uppercase tracking-tight">
+                                <span class="opacity-50">Note :</span> Redirection vers la gestion des spécialités après validation.
+                            </p>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Photo de profil</label>
+                    <div class="relative group">
+                        <input type="file" name="photo" 
+                            class="w-full px-5 py-3 bg-slate-100 border-2 border-dashed border-slate-200 rounded-2xl font-bold text-[10px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-slate-900 file:text-white group-hover:border-indigo-300 transition cursor-pointer">
+                    </div>
+                </div>
+
+                {{-- Sécurité --}}
+                <div class="p-6 bg-slate-900 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i class="fas fa-shield-alt text-6xl text-white"></i>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em] ml-1">Mot de passe</label>
+                            <input type="password" name="password" required 
+                                class="w-full px-5 py-4 bg-white/10 border-none rounded-2xl font-bold text-xs text-white focus:ring-2 focus:ring-indigo-400 shadow-inner placeholder:text-white/20" placeholder="••••••••">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em] ml-1">Confirmation</label>
+                            <input type="password" name="password_confirmation" required 
+                                class="w-full px-5 py-4 bg-white/10 border-none rounded-2xl font-bold text-xs text-white focus:ring-2 focus:ring-indigo-400 shadow-inner placeholder:text-white/20" placeholder="••••••••">
                         </div>
                     </div>
-
-                    <form action="{{ route('admin.users.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
-                        @csrf
-                        
-                        @if ($errors->any() && !old('_method'))
-                            <div class="p-4 bg-rose-50 border-l-4 border-rose-500 rounded-xl mb-6">
-                                <ul class="text-[11px] font-bold text-rose-500 uppercase tracking-tight">
-                                    @foreach ($errors->all() as $error) <li>{{ $error }}</li> @endforeach
-                                </ul>
-                            </div>
-                        @endif
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prénom</label>
-                                <input type="text" name="first_name" value="{{ old('first_name') }}" required class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-inner">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom de famille</label>
-                                <input type="text" name="last_name" value="{{ old('last_name') }}" required class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-inner">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
-                                <input type="email" name="email" value="{{ old('email') }}" required class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-inner">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Attribution du Rôle</label>
-                                <select name="role_id" @change="handleRoleChange" required class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-inner">
-                                    <option value="" disabled selected>Sélectionner...</option>
-                                    @foreach($roles as $role)
-                                        <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>{{ $role->nom }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        {{-- Notice de Redirection Dynamique --}}
-                        <div x-show="roleSelected.includes('étudiant')" x-transition class="p-4 bg-amber-50 border-l-4 border-amber-400 rounded-r-2xl flex items-start gap-4">
-                            <i class="fas fa-user-graduate text-amber-500 mt-1"></i>
-                            <p class="text-[10px] font-black text-amber-800 leading-relaxed uppercase tracking-tight">
-                                <span class="block text-xs mb-1">Redirection Étudiant</span>
-                                Vous devrez compléter : Série du Bac, Matricule, Classe et Niveau.
-                            </p>
-                        </div>
-
-                        <div x-show="roleSelected.includes('enseignant')" x-transition class="p-4 bg-indigo-50 border-l-4 border-indigo-400 rounded-r-2xl flex items-start gap-4">
-                            <i class="fas fa-chalkboard-teacher text-indigo-500 mt-1"></i>
-                            <p class="text-[10px] font-black text-indigo-800 leading-relaxed uppercase tracking-tight">
-                                <span class="block text-xs mb-1">Redirection Enseignant</span>
-                                Vous devrez compléter : Grade, Spécialité et Matières enseignées.
-                            </p>
-                        </div>
-
-                        <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Photo (Avatar)</label>
-                            <input type="file" name="photo" class="w-full px-5 py-3 bg-slate-50 border-none rounded-2xl font-bold text-[10px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-indigo-600 file:text-white shadow-inner">
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-900 rounded-[2rem] shadow-xl">
-                            <div class="space-y-2">
-                                <label class="text-[9px] font-black text-white/50 uppercase tracking-[0.2em] ml-1">Mot de passe</label>
-                                <input type="password" name="password" required class="w-full px-5 py-4 bg-white/10 border-none rounded-2xl font-bold text-xs text-white focus:ring-2 focus:ring-indigo-400 shadow-inner">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-[9px] font-black text-white/50 uppercase tracking-[0.2em] ml-1">Confirmation</label>
-                                <input type="password" name="password_confirmation" required class="w-full px-5 py-4 bg-white/10 border-none rounded-2xl font-bold text-xs text-white focus:ring-2 focus:ring-indigo-400 shadow-inner">
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end gap-6 pt-6 sticky bottom-0 bg-white pb-4">
-                            <button type="button" x-on:click="$dispatch('close')" class="text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600">Annuler</button>
-                            <button type="submit" class="px-10 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition shadow-xl shadow-indigo-200">
-                                Créer l'accès <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
-                        </div>
-                    </form>
                 </div>
-            </div>
-        </x-modal>
+
+                {{-- Footer Action --}}
+                <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                    <button type="button" @click="$dispatch('close')" class="text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-rose-500 transition">
+                        Abandonner
+                    </button>
+                    <button type="submit" class="px-12 py-5 bg-indigo-600 text-white rounded-[1.8rem] font-black text-[11px] uppercase tracking-[0.15em] hover:bg-slate-900 transition-all shadow-xl hover:-translate-y-1">
+                        Finaliser la création <i class="fas fa-arrow-right ml-2 text-[10px]"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</x-modal>
 
         {{-- ========================================== --}}
         {{-- MODAL MODIFICATION --}}
         {{-- ========================================== --}}
         <x-modal name="edit-user" focusable>
-            <div class="p-0 max-h-[90vh] overflow-y-auto">
+            <div class="p-0 max-h-[90vh] overflow-y-auto no-scrollbar">
                 <div class="p-10">
-                    <h2 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter mb-8">
-                        Édition du <span class="text-indigo-600">Profil</span>
-                    </h2>
+                    <h2 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter mb-8">Édition du <span class="text-indigo-600">Profil</span></h2>
                     
                     <form :action="'/admin/users/' + currentUser.id" method="POST" enctype="multipart/form-data" class="space-y-6">
                         @csrf @method('PUT')
@@ -231,22 +248,22 @@
                         <div class="grid grid-cols-2 gap-6">
                             <div class="space-y-2">
                                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prénom</label>
-                                <input type="text" name="first_name" x-model="currentUser.first_name" class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" name="first_name" x-model="currentUser.first_name" class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-inner">
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom</label>
-                                <input type="text" name="last_name" x-model="currentUser.last_name" class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" name="last_name" x-model="currentUser.last_name" class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-inner uppercase">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-6">
                             <div class="space-y-2">
                                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
-                                <input type="email" name="email" x-model="currentUser.email" class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500">
+                                <input type="email" name="email" x-model="currentUser.email" class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-inner">
                             </div>
                             <div class="space-y-2">
                                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rôle</label>
-                                <select name="role_id" x-model="currentUser.role_id" @change="handleRoleChange" class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500">
+                                <select name="role_id" x-model="currentUser.role_id" class="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-inner">
                                     @foreach($roles as $role)
                                         <option value="{{ $role->id }}">{{ $role->nom }}</option>
                                     @endforeach
@@ -255,19 +272,15 @@
                         </div>
 
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 text-indigo-600">Actualiser la Photo (Optionnel)</label>
-                            <input type="file" name="photo" class="w-full px-5 py-3 bg-slate-50 border-none rounded-2xl font-bold text-[10px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-slate-900 file:text-white">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nouvelle Photo</label>
+                            <input type="file" name="photo" class="w-full px-5 py-3 bg-slate-50 border-none rounded-2xl font-bold text-[10px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-slate-900 file:text-white shadow-inner">
                         </div>
 
-                        {{-- Section Mot de passe Facultative --}}
-                        <div class="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 shadow-inner">
-                            <div class="flex items-center gap-2 mb-4">
-                                <i class="fas fa-shield-alt text-indigo-500 text-xs"></i>
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Sécurité (Laissez vide pour conserver l'actuel)</p>
-                            </div>
+                        <div class="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest italic mb-4">Laissez vide pour conserver le mot de passe actuel</p>
                             <div class="grid grid-cols-2 gap-6">
-                                <input type="password" name="password" placeholder="Nouveau" class="w-full px-5 py-4 bg-white border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                                <input type="password" name="password_confirmation" placeholder="Confirmer" class="w-full px-5 py-4 bg-white border-none rounded-2xl font-bold text-xs focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                                <input type="password" name="password" placeholder="Nouveau" class="w-full px-5 py-4 bg-white border-none rounded-2xl font-bold text-xs shadow-sm focus:ring-indigo-500">
+                                <input type="password" name="password_confirmation" placeholder="Confirmer" class="w-full px-5 py-4 bg-white border-none rounded-2xl font-bold text-xs shadow-sm focus:ring-indigo-500">
                             </div>
                         </div>
 
@@ -298,11 +311,8 @@
                     </div>
                 </div>
 
-                <div class="p-6 bg-rose-50/30 rounded-[2rem] border border-rose-100 mb-8">
-                    <p class="text-[10px] font-black text-rose-800 leading-relaxed uppercase tracking-tight italic">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        Attention : La suppression de cet utilisateur (Rôle: <span x-text="roleNom"></span>) entraînera la perte définitive de toutes ses données liées au système INPTIC.
-                    </p>
+                <div class="p-6 bg-rose-50/30 rounded-[2rem] border border-rose-100 mb-8 font-black text-rose-800 text-[10px] uppercase italic leading-relaxed">
+                    Attention : La suppression de cet utilisateur entraînera la perte définitive de toutes ses données liées au système (Profils, absences, notes).
                 </div>
 
                 <div class="flex justify-end gap-6">
@@ -317,18 +327,7 @@
 </x-app-layout>
 
 <style>
-    /* Pour une scrollbar plus discrète dans la modale */
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f8fafc;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #e2e8f0;
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #6366f1;
-    }
+    /* Design sans barre de défilement visible */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
