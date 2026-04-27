@@ -8,8 +8,10 @@ use App\Models\Etudiant;
 use App\Models\StudentProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class EtudiantController extends Controller
 {
@@ -23,7 +25,58 @@ class EtudiantController extends Controller
     }
 
     /**
-     * ÉTAPE 2 : Finalisation (Correction de l'erreur de doublon)
+     * ÉTAPE 1 : Création initiale (Compte User + Profil de base)
+     * C'est ici qu'on déclenche la redirection vers la finalisation.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nom'    => 'required|string|max:100',
+            'prenom' => 'required|string|max:100',
+            'email'  => 'required|email|unique:users,email',
+        ]);
+
+        try {
+            $etudiant = DB::transaction(function () use ($request) {
+                // 1. Créer l'utilisateur
+                $user = User::create([
+                    'first_name' => $request->prenom,
+                    'last_name'  => strtoupper($request->nom),
+                    'email'      => $request->email,
+                    'password'   => Hash::make('Etudiant2026'), // Mot de passe par défaut
+                ]);
+
+                // 2. Créer l'étudiant
+                $etudiant = Etudiant::create([
+                    'nom'          => strtoupper($request->nom),
+                    'prenom'       => $request->prenom,
+                    'is_finalized' => false,
+                ]);
+
+                // 3. Créer le profil étudiant (Pivot) avec matricule temporaire
+                StudentProfile::create([
+                    'user_id'     => $user->id,
+                    'etudiant_id' => $etudiant->id,
+                    'matricule'   => 'TEMP-' . strtoupper(Str::random(6)),
+                ]);
+
+                return $etudiant;
+            });
+
+            // Redirection vers l'index avec les instructions pour Alpine.js
+            return redirect()->route('admin.etudiants.index')
+                ->with('success', "Le compte de {$etudiant->prenom} a été créé.")
+                ->with('open_finalize_modal', true)
+                ->with('etudiant_to_finalize', $etudiant->load('studentProfile.user'));
+
+        } catch (\Exception $e) {
+            return back()->with('error', "Erreur lors de la création : " . $e->getMessage());
+        }
+    }
+
+    /**
+     * ÉTAPE 2 : Finalisation du dossier académique.
+     * Génère un matricule définitif et complète les infos.
      */
     public function finalize(Request $request, $id)
     {
@@ -38,18 +91,17 @@ class EtudiantController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Vérifier si l'étudiant a déjà un matricule définitif pour éviter le doublon
             $profile = $etudiant->studentProfile;
             
+            // Logique de génération de matricule INPTIC-YYYY-XXX
             if (!$profile || str_contains($profile->matricule, 'TEMP-')) {
-                // Calcul du matricule : on cherche le dernier numéro attribué cette année
                 $annee = date('Y');
+                
                 $lastStudent = StudentProfile::where('matricule', 'like', "INPTIC-$annee-%")
                     ->orderBy('matricule', 'desc')
                     ->first();
 
                 if ($lastStudent) {
-                    // On extrait le dernier nombre (ex: 003 de INPTIC-2026-003) et on fait +1
                     $lastNumber = (int) substr($lastStudent->matricule, -3);
                     $newNumber = $lastNumber + 1;
                 } else {
@@ -58,11 +110,10 @@ class EtudiantController extends Controller
 
                 $matricule = "INPTIC-" . $annee . "-" . str_pad($newNumber, 3, '0', STR_PAD_LEFT);
             } else {
-                // Si le matricule est déjà officiel, on garde l'existant
                 $matricule = $profile->matricule;
             }
 
-            // 2. Mise à jour de l'étudiant
+            // Mise à jour de l'étudiant
             $etudiant->update([
                 'date_naissance' => $request->date_naissance,
                 'lieu_naissance' => strtoupper($request->lieu_naissance),
@@ -71,14 +122,15 @@ class EtudiantController extends Controller
                 'is_finalized'   => true,
             ]);
 
-            // 3. Mise à jour du profil
-            $etudiant->studentProfile()->update([
-                'matricule' => $matricule
-            ]);
+            // Mise à jour du matricule officiel
+            if ($profile) {
+                $profile->update(['matricule' => $matricule]);
+            }
 
             DB::commit();
 
             return redirect()->route('admin.etudiants.index')
+                ->with('success', "Le dossier de {$etudiant->prenom} est désormais finalisé.")
                 ->with('finalized_success', true)
                 ->with('matricule', $matricule);
 
@@ -89,7 +141,7 @@ class EtudiantController extends Controller
     }
 
     /**
-     * Mise à jour du dossier (Photo uniquement via User)
+     * Mise à jour classique du dossier (Identité, Email et Photo).
      */
     public function update(Request $request, Etudiant $etudiant)
     {
@@ -109,7 +161,7 @@ class EtudiantController extends Controller
         try {
             DB::transaction(function () use ($request, $etudiant, $user) {
                 
-                // Gestion de la photo dans la table USERS
+                // Gestion de la photo
                 if ($request->hasFile('photo') && $user) {
                     if ($user->photo) {
                         Storage::disk('public')->delete($user->photo);
@@ -118,7 +170,7 @@ class EtudiantController extends Controller
                     $user->update(['photo' => $photoPath]);
                 }
 
-                // Mise à jour Etudiant
+                // Mise à jour table etudiants
                 $etudiant->update([
                     'nom'            => strtoupper($request->nom),
                     'prenom'         => $request->prenom,
@@ -128,7 +180,7 @@ class EtudiantController extends Controller
                     'provenance'     => $request->provenance,
                 ]);
 
-                // Synchronisation User
+                // Mise à jour table users
                 if ($user) {
                     $user->update([
                         'first_name' => $request->prenom,
@@ -139,7 +191,7 @@ class EtudiantController extends Controller
             });
 
             return redirect()->route('admin.etudiants.index')
-                ->with('success', "Le dossier de l'étudiant " . $etudiant->nom . " a été mis à jour.");
+                ->with('success', "Le dossier a été mis à jour.");
 
         } catch (\Exception $e) {
             return back()->with('error', "Erreur de mise à jour : " . $e->getMessage());
@@ -147,7 +199,7 @@ class EtudiantController extends Controller
     }
 
     /**
-     * Suppression (Cascade manuelle)
+     * Suppression en cascade.
      */
     public function destroy(Etudiant $etudiant)
     {
@@ -155,15 +207,20 @@ class EtudiantController extends Controller
             DB::transaction(function () use ($etudiant) {
                 if ($etudiant->studentProfile) {
                     $user = $etudiant->studentProfile->user;
-                    if ($user && $user->photo) {
-                        Storage::disk('public')->delete($user->photo);
+                    
+                    if ($user) {
+                        if ($user->photo) {
+                            Storage::disk('public')->delete($user->photo);
+                        }
+                        $user->delete(); // Supprime l'user et le profile via cascade
                     }
-                    $etudiant->studentProfile->delete();
-                    if ($user) { $user->delete(); }
                 }
                 $etudiant->delete();
             });
-            return redirect()->route('admin.etudiants.index')->with('success', "Suppression réussie.");
+
+            return redirect()->route('admin.etudiants.index')
+                ->with('success', "Dossier supprimé définitivement.");
+
         } catch (\Exception $e) {
             return back()->with('error', "Échec de la suppression.");
         }

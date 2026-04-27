@@ -11,11 +11,11 @@ class FiliereController extends Controller
 {
     public function index()
     {
-        // On récupère les filières avec leur département associé
-        $filieres = Filiere::with('departement')->orderBy('nom')->paginate(10);
-        $departements = Departement::all();
+    // On ajoute withCount('classes') pour la sécurité de suppression
+        $filieres = Filiere::with('departement')->withCount('classes')->orderBy('nom')->paginate(10);
+        $departements = Departement::orderBy('nom')->get();
 
-        return view('admin.filieres.index', compact('filieres', 'departements'));
+     return view('admin.filieres.index', compact('filieres', 'departements'));
     }
 
     public function store(Request $request)

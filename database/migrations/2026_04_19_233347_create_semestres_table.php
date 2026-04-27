@@ -6,16 +6,16 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::create('semestres', function (Blueprint $table) {
-            $table->id();
-            $table->string('libelle', 10)->nullable();
-            $table->foreignId('classe_id')->nullable()->constrained('classes')->onDelete('cascade');
-            $table->timestamps();
-        });
-    }
-
+public function up(): void
+{
+    Schema::create('semestres', function (Blueprint $table) {
+        $table->id();
+        $table->string('libelle', 20); // ex: Semestre 1
+        $table->string('annee_universitaire', 20); 
+        $table->foreignId('classe_id')->constrained('classes')->onDelete('cascade');
+        $table->timestamps();
+    });
+}
     public function down(): void
     {
         Schema::dropIfExists('semestres');

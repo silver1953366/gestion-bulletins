@@ -36,11 +36,11 @@ class RoleAndAdminSeeder extends Seeder
         // CREER ADMIN
         // =========================
         DB::table('users')->updateOrInsert(
-            ['email' => 'moulekageorges@gmail.com'],
+            ['email' => 'marcessone@gmail.com'],
             [
                 'first_name' => 'Admin',
                 'last_name' => 'System',
-                'password' => Hash::make('jova2006'), // change après
+                'password' => Hash::make('marc1234'), // change après
                 'role_id' => $adminRole->id,
                 'created_at' => now(),
                 'updated_at' => now(),

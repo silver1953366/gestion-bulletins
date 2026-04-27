@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\SemestreController;
 use App\Http\Controllers\Admin\DepartementController;
 use App\Http\Controllers\Admin\FiliereController;
+use App\Http\Controllers\Admin\NiveauController; // Ajouté
 use App\Http\Controllers\Admin\UeController;
 use App\Http\Controllers\Admin\MatiereController;
 use App\Http\Controllers\Admin\EnseignantMatiereController;
@@ -52,7 +53,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
     
     // Gestion des dossiers étudiants
-    // Note : On ajoute la route de finalisation AVANT le resource pour éviter les conflits
     Route::post('/etudiants/finalize/{id}', [EtudiantController::class, 'finalize'])->name('etudiants.finalize');
     Route::resource('etudiants', EtudiantController::class)->except(['create', 'show', 'edit']);
     
@@ -65,6 +65,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // ---------------------------------------------------------
     Route::resource('departements', DepartementController::class)->except(['create', 'show', 'edit']);
     Route::resource('filieres', FiliereController::class)->except(['create', 'show', 'edit']);
+    Route::resource('niveaux', NiveauController::class)->except(['create', 'show', 'edit']); // Ajouté
     Route::resource('classes', ClasseController::class)->except(['create', 'show', 'edit']);
     Route::resource('semestres', SemestreController::class)->except(['create', 'show', 'edit']);
 

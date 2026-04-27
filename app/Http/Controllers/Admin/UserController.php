@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Etudiant;
 use App\Models\StudentProfile;
+use App\Models\TeacherProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
@@ -27,7 +28,7 @@ class UserController extends Controller
     }
 
     /**
-     * Stocke un nouvel utilisateur et initialise le profil si nécessaire.
+     * Stocke un nouvel utilisateur et initialise le profil (Étudiant ou Enseignant).
      */
     public function store(Request $request)
     {
@@ -43,7 +44,7 @@ class UserController extends Controller
         try {
             $result = DB::transaction(function () use ($request) {
                 
-                // 1. Gestion de la photo au moment de la création
+                // 1. Gestion de la photo
                 $photoPath = null;
                 if ($request->hasFile('photo')) {
                     $photoPath = $request->file('photo')->store('users-photos', 'public');
@@ -60,8 +61,9 @@ class UserController extends Controller
                 ]);
 
                 $etudiantId = null;
+                $teacherId  = null;
 
-                // 3. Logique spécifique au rôle Étudiant (ID 4)
+                // 3. Logique Rôle Étudiant (ID 4)
                 if ($user->role_id == 4) {
                     $etudiant = Etudiant::create([
                         'nom'          => strtoupper($request->last_name),
@@ -78,13 +80,42 @@ class UserController extends Controller
                     $etudiantId = $etudiant->id;
                 }
 
-                return ['user' => $user, 'etudiant_id' => $etudiantId];
+                // 4. Logique Rôle Enseignant (ID 2)
+                if ($user->role_id == 2) {
+                    $teacher = TeacherProfile::create([
+                        'user_id'    => $user->id,
+                        'specialite' => 'À définir', 
+                        'grade'      => null
+                    ]);
+
+                    $teacherId = $teacher->id;
+                }
+
+                return [
+                    'user'        => $user, 
+                    'etudiant_id' => $etudiantId, 
+                    'teacher_id'  => $teacherId
+                ];
             });
 
-            // Redirection vers la finalisation si c'est un étudiant
+            // REDIRECTIONS AVEC FLAGS POUR MODALS AUTOMATIQUES
+
+            // Cas Étudiant
             if ($result['etudiant_id']) {
-                return redirect()->route('admin.etudiants.index', ['finalize' => $result['etudiant_id']])
-                    ->with('success', "Compte créé. Veuillez finaliser le dossier académique de l'étudiant.");
+                $etudiant = Etudiant::find($result['etudiant_id']);
+                return redirect()->route('admin.etudiants.index')
+                    ->with('success', "Compte étudiant créé. Veuillez finaliser le dossier.")
+                    ->with('open_finalize_modal', true)
+                    ->with('etudiant_to_finalize', $etudiant);
+            }
+
+            // Cas Enseignant
+            if ($result['teacher_id']) {
+                $teacher = TeacherProfile::with('user')->find($result['teacher_id']);
+                return redirect()->route('admin.teachers.index')
+                    ->with('success', "Compte enseignant créé. Veuillez compléter son profil.")
+                    ->with('open_edit_modal', true) 
+                    ->with('teacher_to_edit', $teacher);
             }
 
             return redirect()->route('admin.users.index')
@@ -111,7 +142,7 @@ class UserController extends Controller
 
         try {
             DB::transaction(function () use ($request, $validated, $user) {
-                // Gestion de la photo (Update)
+                // Photo
                 if ($request->hasFile('photo')) {
                     if ($user->photo) {
                         Storage::disk('public')->delete($user->photo);
@@ -130,7 +161,7 @@ class UserController extends Controller
 
                 $user->save();
 
-                // Optionnel : Synchroniser avec la table etudiant si l'utilisateur est un étudiant
+                // Synchro nom/prénom si profil étudiant lié
                 if ($user->studentProfile && $user->studentProfile->etudiant) {
                     $user->studentProfile->etudiant->update([
                         'nom'    => strtoupper($validated['last_name']),
@@ -148,7 +179,7 @@ class UserController extends Controller
     }
 
     /**
-     * Suppression de l'utilisateur.
+     * Suppression de l'utilisateur et de tous ses profils liés.
      */
     public function destroy(User $user)
     {
@@ -158,25 +189,26 @@ class UserController extends Controller
 
         try {
             DB::transaction(function () use ($user) {
-                // 1. Suppression de la photo physique
+                // 1. Photo
                 if ($user->photo) {
                     Storage::disk('public')->delete($user->photo);
                 }
 
-                // 2. Suppression des profils rattachés
+                // 2. Profil Étudiant
                 if ($user->studentProfile) {
-                    // On peut aussi supprimer l'entrée dans la table 'etudiants' ici si nécessaire
                     if ($user->studentProfile->etudiant) {
                         $user->studentProfile->etudiant->delete();
                     }
                     $user->studentProfile->delete();
                 }
                 
+                // 3. Profil Enseignant
                 if ($user->teacherProfile) {
-                    $user->teacherProfile()->delete();
+                    $user->teacherProfile->matieres()->detach();
+                    $user->teacherProfile->delete();
                 }
                 
-                // 3. Suppression finale de l'utilisateur
+                // 4. User
                 $user->delete();
             });
 

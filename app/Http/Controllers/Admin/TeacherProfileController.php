@@ -5,131 +5,120 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\TeacherProfile;
 use App\Models\User;
-use App\Models\Matiere;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TeacherProfileController extends Controller
 {
     /**
-     * Affiche la liste des enseignants.
+     * Affiche la liste des profils et les comptes à compléter.
      */
     public function index()
     {
-        // On charge 'user' et 'matieres' pour optimiser les performances (Eager Loading)
-        $teachers = TeacherProfile::with(['user', 'matieres'])->paginate(10);
-        
-        return view('admin.teachers.index', compact('teachers'));
+        // 1. Liste de tous les profils enseignants existants
+        $teachers = TeacherProfile::with(['user', 'matieres'])
+            ->latest()
+            ->paginate(10);
+
+        /**
+         * 2. Récupération des utilisateurs "Enseignants" sans profil complet :
+         * - Soit ils n'ont pas de TeacherProfile du tout.
+         * - Soit leur spécialité est encore "À définir".
+         */
+        $availableUsers = User::where('role_id', 2) // ID 3 = Enseignant
+            ->where(function($query) {
+                $query->whereDoesntHave('teacherProfile')
+                      ->orWhereHas('teacherProfile', function($q) {
+                          $q->where('specialite', 'À définir')
+                            ->orWhereNull('specialite');
+                      });
+            })
+            ->orderBy('last_name')
+            ->get();
+
+        return view('admin.teachers.index', compact('teachers', 'availableUsers'));
     }
 
     /**
-     * Formulaire de création d'un nouveau profil.
-     */
-    public function create()
-    {
-        // On ne liste que les utilisateurs qui n'ont PAS encore de profil enseignant
-        $users = User::whereDoesntHave('teacherProfile')->get();
-        $matieres = Matiere::all();
-        
-        return view('admin.teachers.create', compact('users', 'matieres'));
-    }
-
-    /**
-     * Enregistre un nouveau profil enseignant.
+     * Finalise ou crée un profil enseignant (utilisé par le modal "Compléter").
      */
     public function store(Request $request)
     {
         $request->validate([
-            'user_id'    => 'required|exists:users,id|unique:teacher_profiles,user_id',
+            'user_id'    => 'required|exists:users,id',
             'specialite' => 'required|string|max:255',
             'grade'      => 'nullable|string|max:100',
-            'matieres'   => 'nullable|array',
-            'matieres.*' => 'exists:matieres,id'
         ]);
 
         try {
-            DB::transaction(function () use ($request) {
-                // Création du profil
-                $teacher = TeacherProfile::create($request->only(['user_id', 'specialite', 'grade']));
+            // On utilise updateOrCreate pour gérer les deux cas (création ou finalisation)
+            $teacher = TeacherProfile::updateOrCreate(
+                ['user_id' => $request->user_id],
+                [
+                    'specialite' => $request->specialite,
+                    'grade'      => $request->grade,
+                ]
+            );
 
-                // Attachement des matières sélectionnées
-                if ($request->filled('matieres')) {
-                    $teacher->matieres()->attach($request->matieres);
-                }
-            });
+            $userName = $teacher->user->full_name ?? 'de l\'enseignant';
 
             return redirect()->route('admin.teachers.index')
-                             ->with('success', 'Le profil enseignant a été créé avec succès.');
+                ->with('success', "Le profil de {$userName} a été configuré avec succès.");
+
         } catch (\Exception $e) {
-            return back()->withInput()->with('error', 'Erreur lors de la création : ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Erreur lors de la configuration : ' . $e->getMessage());
         }
     }
 
     /**
-     * Affiche les détails d'un enseignant spécifique.
-     */
-    public function show(TeacherProfile $teacher)
-    {
-        // On charge explicitement les relations pour la page de détails
-        $teacher->load(['user', 'matieres']);
-        
-        return view('admin.teachers.show', compact('teacher'));
-    }
-
-    /**
-     * Formulaire d'édition.
-     */
-    public function edit(TeacherProfile $teacher)
-    {
-        // On charge les matières pour pouvoir les cocher dans la vue
-        $matieres = Matiere::all();
-        $teacher->load('matieres');
-
-        return view('admin.teachers.edit', compact('teacher', 'matieres'));
-    }
-
-    /**
-     * Met à jour le profil.
+     * Met à jour les informations d'un profil existant (Bouton Modifier).
      */
     public function update(Request $request, TeacherProfile $teacher)
     {
         $request->validate([
             'specialite' => 'required|string|max:255',
             'grade'      => 'nullable|string|max:100',
-            'matieres'   => 'nullable|array',
-            'matieres.*' => 'exists:matieres,id'
         ]);
 
         try {
-            DB::transaction(function () use ($request, $teacher) {
-                // Mise à jour des infos de base
-                $teacher->update($request->only(['specialite', 'grade']));
+            $teacher->update($request->only(['specialite', 'grade']));
 
-                // Synchronisation des matières (ajoute les nouvelles, supprime les anciennes)
-                $teacher->matieres()->sync($request->matieres ?? []);
-            });
+            $name = $teacher->user->full_name ?? 'de l\'enseignant';
 
             return redirect()->route('admin.teachers.index')
-                             ->with('success', 'Le profil de ' . $teacher->user->name . ' a été mis à jour.');
+                ->with('success', "Le profil de {$name} a été mis à jour.");
+
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'Erreur lors de la mise à jour : ' . $e->getMessage());
         }
     }
 
     /**
-     * Supprime le profil (l'utilisateur reste en base, seul son profil enseignant disparaît).
+     * Supprime le profil (Détache les matières et supprime l'entrée profil).
+     * Note: Le compte User reste intact.
      */
     public function destroy(TeacherProfile $teacher)
     {
         try {
-            // Les matières liées seront détachées automatiquement si ta migration a "onDelete cascade" 
-            // ou tu peux faire $teacher->matieres()->detach() avant si besoin.
-            $teacher->delete();
-            
+            DB::transaction(function () use ($teacher) {
+                // Nettoyage des attributions de matières
+                $teacher->matieres()->detach();
+                $teacher->delete();
+            });
+
             return redirect()->route('admin.teachers.index')
-                             ->with('success', 'Profil enseignant supprimé avec succès.');
+                ->with('success', 'Le profil a été supprimé. Le compte utilisateur reste actif et peut être re-configuré.');
+
         } catch (\Exception $e) {
-            return back()->with('error', 'Impossible de supprimer ce profil.');
+            return back()->with('error', 'Erreur lors de la suppression : ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Retourne les données JSON pour AlpineJS (Utile pour le modal de modification).
+     */
+    public function show(TeacherProfile $teacher)
+    {
+        return response()->json($teacher->load('user'));
     }
 }

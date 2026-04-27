@@ -13,8 +13,6 @@ return new class extends Migration
             $table->string('code', 50)->unique();
             $table->string('libelle', 255)->nullable();
             $table->foreignId('semestre_id')->nullable()->constrained('semestres')->onDelete('cascade');
-            $table->integer('coefficient')->default(1);
-            $table->integer('credits')->default(0);
             $table->timestamps();
         });
     }

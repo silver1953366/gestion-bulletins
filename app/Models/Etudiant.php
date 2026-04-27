@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
 
 class Etudiant extends Model
 {
@@ -13,7 +14,6 @@ class Etudiant extends Model
 
     /**
      * Les attributs qui peuvent être assignés en masse.
-     * Note : 'photo' et 'is_finalized' sont cruciaux pour le suivi du dossier.
      */
     protected $fillable = [
         'nom',
@@ -22,8 +22,8 @@ class Etudiant extends Model
         'lieu_naissance',
         'bac',
         'provenance',
-        'photo',          // Permet l'enregistrement du chemin de l'image
-        'is_finalized'    // Permet de basculer le statut de "Attente" à "Finalisé"
+        'photo', // Conservé car présent en base, mais l'accesseur donnera la priorité à User
+        'is_finalized'
     ];
 
     /**
@@ -31,16 +31,34 @@ class Etudiant extends Model
      */
     protected $casts = [
         'date_naissance' => 'date:Y-m-d',
-        'is_finalized'   => 'boolean', // Assure que la valeur soit traitée comme un vrai booléen
+        'is_finalized'   => 'boolean',
     ];
 
     /* -------------------------------------------------------------------------- */
-    /* ACCESSEURS                                                                 */
+    /* ACCESSEURS (Logique métier)                                               */
     /* -------------------------------------------------------------------------- */
 
     /**
+     * Récupère la photo depuis le compte User lié.
+     * Si l'utilisateur n'a pas de photo ou n'existe pas, renvoie un avatar par défaut.
+     * Appel dans Blade : {{ $etudiant->profile_photo }}
+     */
+    public function getProfilePhotoAttribute(): string
+    {
+        // On tente de récupérer le chemin depuis l'User lié au StudentProfile
+        $userPhoto = $this->studentProfile?->user?->photo;
+
+        if ($userPhoto && Storage::disk('public')->exists($userPhoto)) {
+            return asset('storage/' . $userPhoto);
+        }
+
+        // Retourne une image par défaut si aucune photo n'est trouvée
+        return asset('images/default-avatar.png'); 
+    }
+
+    /**
      * Accesseur pour le matricule (via StudentProfile)
-     * Permet de faire $etudiant->matricule directement
+     * Appel dans Blade : {{ $etudiant->matricule }}
      */
     public function getMatriculeAttribute(): ?string
     {
@@ -56,15 +74,15 @@ class Etudiant extends Model
     }
 
     /* -------------------------------------------------------------------------- */
-    /* RELATIONS STRUCTURELLES                                                    */
+    /* RELATIONS                                                                  */
     /* -------------------------------------------------------------------------- */
 
     /**
-     * Lien vers le profil académique contenant le matricule
+     * Lien vers le profil académique (Pivot entre User et Etudiant)
      */
     public function studentProfile(): HasOne
     {
-        return $this->hasOne(StudentProfile::class);
+        return $this->hasOne(StudentProfile::class, 'etudiant_id');
     }
 
     public function inscriptions(): HasMany
@@ -77,29 +95,15 @@ class Etudiant extends Model
         return $this->hasMany(Bulletin::class);
     }
 
-    /* -------------------------------------------------------------------------- */
-    /* RELATIONS PÉDAGOGIQUES                                                    */
-    /* -------------------------------------------------------------------------- */
-
-    /**
-     * Notes de CC, EXAMEN, RATTRAPAGE
-     */
     public function evaluations(): HasMany
     {
         return $this->hasMany(Evaluation::class);
     }
 
-    /**
-     * Absences de l'étudiant
-     */
     public function absences(): HasMany
     {
         return $this->hasMany(Absence::class);
     }
-
-    /* -------------------------------------------------------------------------- */
-    /* RELATIONS DE RÉSULTATS                                                    */
-    /* -------------------------------------------------------------------------- */
 
     public function resultatsMatieres(): HasMany 
     { 
@@ -116,9 +120,6 @@ class Etudiant extends Model
         return $this->hasMany(ResultatSemestre::class);
     }
 
-    /**
-     * Relation appelée par le Dashboard (Jury/Délibérations)
-     */
     public function resultatsAnnuel(): HasMany
     {
         return $this->hasMany(ResultatAnnuel::class);

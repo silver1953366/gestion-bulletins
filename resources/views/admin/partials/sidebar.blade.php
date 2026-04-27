@@ -36,11 +36,12 @@
         <p x-show="sidebarOpen" class="text-[10px] font-black text-slate-500 uppercase px-3 pt-6 pb-2 tracking-[0.2em]">Organisation</p>
         <x-sidebar-link :href="route('admin.departements.index')" :active="request()->routeIs('admin.departements.*')" icon="fas fa-sitemap" label="Départements" />
         <x-sidebar-link :href="route('admin.filieres.index')" :active="request()->routeIs('admin.filieres.*')" icon="fas fa-stream" label="Filières" />
+        <x-sidebar-link :href="route('admin.niveaux.index')" :active="request()->routeIs('admin.niveaux.*')" icon="fas fa-layer-group" label="Niveaux" />
         <x-sidebar-link :href="route('admin.classes.index')" :active="request()->routeIs('admin.classes.*')" icon="fas fa-school" label="Classes" />
         <x-sidebar-link :href="route('admin.semestres.index')" :active="request()->routeIs('admin.semestres.*')" icon="fas fa-clock" label="Semestres" />
 
         <p x-show="sidebarOpen" class="text-[10px] font-black text-slate-500 uppercase px-3 pt-6 pb-2 tracking-[0.2em]">Programme (LMD)</p>
-        <x-sidebar-link :href="route('admin.ues.index')" :active="request()->routeIs('admin.ues.*')" icon="fas fa-layer-group" label="Unités d'Ens. (UE)" />
+        <x-sidebar-link :href="route('admin.ues.index')" :active="request()->routeIs('admin.ues.*')" icon="fas fa-cubes" label="Unités d'Ens. (UE)" />
         <x-sidebar-link :href="route('admin.matieres.index')" :active="request()->routeIs('admin.matieres.*')" icon="fas fa-book" label="Matières & Crédits" />
         <x-sidebar-link :href="route('admin.enseignant-matiere.index')" :active="request()->routeIs('admin.enseignant-matiere.*')" icon="fas fa-link" label="Attributions" />
 
