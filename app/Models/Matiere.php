@@ -3,9 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Matiere extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'code',
         'libelle',
@@ -16,36 +22,44 @@ class Matiere extends Model
 
     protected $casts = [
         'coefficient' => 'integer',
-        'credits' => 'integer'
+        'credits' => 'integer',
+        'ue_id' => 'integer'
     ];
 
-    public function ue()
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONS
+    |--------------------------------------------------------------------------
+    */
+
+    public function ue(): BelongsTo
     {
-        return $this->belongsTo(Ue::class);
+        return $this->belongsTo(Ue::class, 'ue_id');
     }
 
-    public function enseignantMatieres()
-    {
-        return $this->hasMany(EnseignantMatiere::class);
-    }
-
-    public function enseignants()
+    public function enseignants(): BelongsToMany
     {
         return $this->belongsToMany(TeacherProfile::class, 'enseignant_matiere', 'matiere_id', 'teacher_profile_id');
     }
 
-    public function evaluations()
+    public function evaluations(): HasMany
     {
         return $this->hasMany(Evaluation::class);
     }
 
-    public function absences()
-    {
-        return $this->hasMany(Absence::class);
-    }
-
-    public function resultatsMatieres()
+    public function resultatsMatieres(): HasMany
     {
         return $this->hasMany(ResultatMatiere::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MUTATEURS
+    |--------------------------------------------------------------------------
+    */
+
+    public function setCodeAttribute($value)
+    {
+        $this->attributes['code'] = strtoupper(trim($value));
     }
 }
