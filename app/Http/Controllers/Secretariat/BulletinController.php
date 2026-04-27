@@ -15,12 +15,10 @@ use App\Models\ResultatSemestre;
 use App\Models\ResultatAnnuel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BulletinController extends Controller
 {
-    /**
-     * Afficher la liste des bulletins
-     */
     public function index()
     {
         $etudiants = Etudiant::orderBy('nom')->orderBy('prenom')->get();
@@ -31,9 +29,6 @@ class BulletinController extends Controller
         return view('secretariat.bulletins.index', compact('etudiants', 'bulletins'));
     }
 
-    /**
-     * Générer un bulletin individuel
-     */
     public function generate(Request $request)
     {
         $request->validate([
@@ -44,33 +39,18 @@ class BulletinController extends Controller
         $etudiant = Etudiant::findOrFail($request->etudiant_id);
         $type = $request->type;
         
-        // Récupérer l'année académique active
         $anneeAcademique = AnneeAcademique::where('active', true)->first();
         
         if (!$anneeAcademique) {
             return back()->with('error', 'Aucune année académique active trouvée');
         }
 
-        // Vérifier si un bulletin existe déjà
-        $existingBulletin = Bulletin::where('etudiant_id', $etudiant->id)
-            ->where('type', $type)
-            ->where('annee_academique_id', $anneeAcademique->id)
-            ->first();
-
-        if ($existingBulletin) {
-            return back()->with('warning', 'Un bulletin existe déjà pour cet étudiant');
-        }
-
-        DB::beginTransaction();
-        
         try {
-            // Générer les données du bulletin
-            $bulletinData = $this->prepareBulletinData($etudiant, $type, $anneeAcademique);
+            DB::beginTransaction();
             
-            // Générer le PDF (à implémenter avec DomPDF ou autre)
+            $bulletinData = $this->prepareBulletinData($etudiant, $type, $anneeAcademique);
             $pdfPath = $this->generatePDF($bulletinData);
             
-            // Créer l'enregistrement du bulletin
             $bulletin = Bulletin::create([
                 'etudiant_id' => $etudiant->id,
                 'annee_academique_id' => $anneeAcademique->id,
@@ -91,7 +71,7 @@ class BulletinController extends Controller
     }
 
     /**
-     * Télécharger un bulletin
+     * Télécharger un bulletin - CORRIGÉ
      */
     public function download($id)
     {
@@ -103,12 +83,16 @@ class BulletinController extends Controller
             return back()->with('error', 'Fichier PDF introuvable');
         }
         
-        return response()->download($filePath, "bulletin_{$bulletin->etudiant_id}_{$bulletin->type}.pdf");
+        // Forcer le téléchargement avec les bons headers
+        return response()->download($filePath, "bulletin_{$bulletin->etudiant_id}_{$bulletin->type}.pdf", [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="bulletin_' . $bulletin->etudiant_id . '_' . $bulletin->type . '.pdf"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
-    /**
-     * Export massif des bulletins pour une classe
-     */
     public function exportPdf(Request $request)
     {
         $request->validate([
@@ -119,7 +103,6 @@ class BulletinController extends Controller
         $classeId = $request->classe_id;
         $type = $request->type;
         
-        // Récupérer les étudiants de la classe
         $inscriptions = Inscription::where('classe_id', $classeId)
             ->with('etudiant')
             ->get();
@@ -131,16 +114,6 @@ class BulletinController extends Controller
         
         foreach ($inscriptions as $inscription) {
             $etudiant = $inscription->etudiant;
-            
-            // Vérifier si le bulletin existe déjà
-            $existingBulletin = Bulletin::where('etudiant_id', $etudiant->id)
-                ->where('type', $type)
-                ->where('annee_academique_id', $anneeAcademique->id)
-                ->first();
-            
-            if ($existingBulletin) {
-                continue;
-            }
             
             try {
                 $bulletinData = $this->prepareBulletinData($etudiant, $type, $anneeAcademique);
@@ -169,41 +142,34 @@ class BulletinController extends Controller
             ->with('success', $message);
     }
 
-    /**
-     * Préparer les données pour le bulletin
-     */
     private function prepareBulletinData($etudiant, $type, $anneeAcademique)
     {
-        $data = [
-            'etudiant' => $etudiant,
-            'type' => $type,
-            'annee_academique' => $anneeAcademique,
-            'matieres' => [],
-            'moyenne_generale' => 0,
-            'credits_obtenus' => 0,
-            'mention' => '',
-            'decision' => '',
-        ];
+        $matieres = collect();
+        $moyenneGenerale = 0;
+        $creditsObtenus = 0;
+        $decision = 'En attente';
+        $mention = '';
         
-        // Récupérer les résultats selon le type
         if ($type == 'ANNUEL') {
             $resultatAnnuel = ResultatAnnuel::where('etudiant_id', $etudiant->id)
                 ->where('annee_academique_id', $anneeAcademique->id)
                 ->first();
             
             if ($resultatAnnuel) {
-                $data['moyenne_generale'] = $resultatAnnuel->moyenne;
-                $data['decision'] = $resultatAnnuel->decision;
-                $data['mention'] = $resultatAnnuel->mention ?? $this->getMention($resultatAnnuel->moyenne);
+                $moyenneGenerale = $resultatAnnuel->moyenne;
+                $decision = $resultatAnnuel->decision;
+                $mention = $resultatAnnuel->mention ?? $this->getMention($resultatAnnuel->moyenne);
             }
             
-            // Récupérer tous les résultats par matière pour l'année
-            $data['matieres'] = ResultatMatiere::where('etudiant_id', $etudiant->id)
-                ->with('matiere')
+            $matieres = ResultatMatiere::where('etudiant_id', $etudiant->id)
+                ->with('matiere.ue')
                 ->get();
+                
+            $creditsObtenus = $matieres->sum(function($r) {
+                return ($r->moyenne >= 10) ? ($r->matiere->credits ?? 0) : 0;
+            });
         } else {
-            // Pour S5 ou S6, récupérer les résultats du semestre
-            $semestreLibelle = $type; // S5 ou S6
+            $semestreLibelle = $type;
             $resultatSemestre = ResultatSemestre::where('etudiant_id', $etudiant->id)
                 ->whereHas('semestre', function($q) use ($semestreLibelle) {
                     $q->where('libelle', $semestreLibelle);
@@ -212,27 +178,32 @@ class BulletinController extends Controller
                 ->first();
             
             if ($resultatSemestre) {
-                $data['moyenne_generale'] = $resultatSemestre->moyenne;
-                $data['credits_obtenus'] = $resultatSemestre->credits_total;
-                $data['decision'] = $resultatSemestre->valide ? 'VALIDÉ' : 'NON VALIDÉ';
-                $data['mention'] = $this->getMention($resultatSemestre->moyenne);
+                $moyenneGenerale = $resultatSemestre->moyenne;
+                $creditsObtenus = $resultatSemestre->credits_total;
+                $decision = $resultatSemestre->valide ? 'VALIDÉ' : 'NON VALIDÉ';
+                $mention = $this->getMention($resultatSemestre->moyenne);
             }
             
-            // Récupérer les résultats par matière pour le semestre
-            $data['matieres'] = ResultatMatiere::where('etudiant_id', $etudiant->id)
+            $matieres = ResultatMatiere::where('etudiant_id', $etudiant->id)
                 ->whereHas('matiere.ue.semestre', function($q) use ($semestreLibelle) {
                     $q->where('libelle', $semestreLibelle);
                 })
-                ->with('matiere')
+                ->with('matiere.ue')
                 ->get();
         }
         
-        return $data;
+        return [
+            'etudiant' => $etudiant,
+            'type' => $type,
+            'annee_academique' => $anneeAcademique,
+            'matieres' => $matieres,
+            'moyenne_generale' => $moyenneGenerale,
+            'credits_obtenus' => $creditsObtenus,
+            'mention' => $mention,
+            'decision' => $decision,
+        ];
     }
 
-    /**
-     * Obtenir la mention en fonction de la moyenne
-     */
     private function getMention($moyenne)
     {
         if ($moyenne >= 16) return 'TRÈS BIEN';
@@ -242,25 +213,25 @@ class BulletinController extends Controller
         return 'INSUFFISANT';
     }
 
-    /**
-     * Générer le fichier PDF
-     * Note: Vous devez installer barryvdh/laravel-dompdf pour cette fonction
-     */
     private function generatePDF($data)
     {
-        // Installer DomPDF: composer require barryvdh/laravel-dompdf
-        // Puis décommentez le code ci-dessous
+        // Créer le dossier s'il n'existe pas
+        $directory = storage_path('app/public/bulletins');
+        if (!file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
         
-        /*
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('secretariat.bulletins.pdf', $data);
+        // Générer le PDF
+        $pdf = Pdf::loadView('secretariat.bulletins.pdf', $data);
+        $pdf->setPaper('a4', 'portrait');
+        
+        // Nom du fichier
         $filename = 'bulletins/bulletin_' . $data['etudiant']->id . '_' . $data['type'] . '_' . time() . '.pdf';
-        $path = storage_path('app/public/' . $filename);
-        $pdf->save($path);
-        return $filename;
-        */
+        $fullPath = storage_path('app/public/' . $filename);
         
-        // Version temporaire sans PDF réel
-        $filename = 'bulletins/temp_bulletin_' . $data['etudiant']->id . '_' . time() . '.pdf';
+        // Sauvegarder le PDF
+        $pdf->save($fullPath);
+        
         return $filename;
     }
 }
